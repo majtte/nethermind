@@ -58,6 +58,11 @@ public class FlatWorldStateModule(IFlatDbConfig flatDbConfig): Module
                     return ctx.Resolve<RocksdbPersistence>();
                 }
 
+                if (flatDbConfig.Layout == FlatLayout.ShortFlat)
+                {
+                    return ctx.Resolve<ShortenedRocksdbPersistence>();
+                }
+
                 if (flatDbConfig.Layout == FlatLayout.PreimageFlat)
                 {
                     return ctx.Resolve<PreimageRocksdbPersistence>();
@@ -67,8 +72,10 @@ public class FlatWorldStateModule(IFlatDbConfig flatDbConfig): Module
             })
 
             .AddSingleton<PreimageRocksdbPersistence>()
+            .AddDatabase(DbNames.Preimage)
 
             .AddSingleton<RocksdbPersistence>()
+            .AddSingleton<ShortenedRocksdbPersistence>()
             .AddSingleton<RocksdbPersistence.Configuration, IFlatDbConfig>((config) => new RocksdbPersistence.Configuration()
             {
                 FlatInTrie = config.Layout == FlatLayout.FlatInTrie,
@@ -108,6 +115,7 @@ public class FlatWorldStateModule(IFlatDbConfig flatDbConfig): Module
                 .AddDatabase(DbNames.FlatStateNodes)
                 .AddDatabase(DbNames.FlatStateTopNodes)
                 .AddDatabase(DbNames.FlatStorageNodes)
+                .AddDatabase(DbNames.FlatFallbackNodes)
                 .AddSingleton<IColumnsDb<FlatDbColumns>>((ctx) =>
                 {
                     return new FakeColumnsDb<FlatDbColumns>(new Dictionary<FlatDbColumns, IDb>()
@@ -118,6 +126,7 @@ public class FlatWorldStateModule(IFlatDbConfig flatDbConfig): Module
                         { FlatDbColumns.StateNodes, ctx.ResolveKeyed<IDb>(DbNames.FlatStateNodes) },
                         { FlatDbColumns.StorageNodes, ctx.ResolveKeyed<IDb>(DbNames.FlatStorageNodes) },
                         { FlatDbColumns.StateTopNodes, ctx.ResolveKeyed<IDb>(DbNames.FlatStateTopNodes) },
+                        { FlatDbColumns.FallbackNodes, ctx.ResolveKeyed<IDb>(DbNames.FlatFallbackNodes) },
                     });
                 });
         }

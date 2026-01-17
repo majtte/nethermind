@@ -6,6 +6,7 @@ namespace Nethermind.Db;
 public enum FlatLayout
 {
     Flat,
+    ShortFlat,
     FlatInTrie,
     PreimageFlat,
 }

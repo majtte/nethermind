@@ -191,7 +191,7 @@ namespace Nethermind.Trie
 
         private static void IncrementLevel(Context context, long[] levels)
         {
-            Interlocked.Increment(ref levels[context.Level]);
+            Interlocked.Increment(ref levels[context.Path.Length]);
         }
     }
 }

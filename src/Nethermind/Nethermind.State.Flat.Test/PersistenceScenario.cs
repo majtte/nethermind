@@ -19,6 +19,7 @@ using Nethermind.Logging;
 using Nethermind.Serialization.Rlp;
 using Nethermind.Specs.ChainSpecStyle;
 using Nethermind.State.Flat.Persistence;
+using Nethermind.Trie;
 using NUnit.Framework;
 
 namespace Nethermind.State.Flat.Test;
@@ -69,6 +70,11 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
             Enabled = true,
             Layout = FlatLayout.PreimageFlat
         }, "PreimageFlat");
+        yield return new TestConfiguration(new FlatDbConfig()
+        {
+            Enabled = true,
+            Layout = FlatLayout.ShortFlat
+        }, "ShortFlat");
     }
 
 
@@ -432,5 +438,91 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
             Assert.That(GetSlot(reader, addr2, slot), Is.EqualTo([0xff]));
             Assert.That(GetSlot(reader, addr3, slot), Is.EqualTo([0x33]));
         }
+    }
+
+    [Test]
+    public void TestCanWriteAndReadTrieNodes()
+    {
+        // State trie nodes with various path lengths
+        TreePath stateShortPath = TreePath.FromHexString("12345"); // <=5 nibbles -> stateTopNodes
+        TreePath stateMediumPath = TreePath.FromHexString("123456789abc"); // >5 nibbles -> stateNodes
+        TreePath stateLongPath = TreePath.FromHexString("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+
+        byte[] stateShortRlp = [0xc1, 0x01];
+        byte[] stateMediumRlp = [0xc1, 0x02];
+        byte[] stateLongRlp = [0xc1, 0x03];
+
+        // Storage trie nodes for different accounts
+        Hash256 account1 = TestItem.KeccakA;
+        Hash256 account2 = TestItem.KeccakB;
+        TreePath storageShortPath = TreePath.FromHexString("abcd");
+        TreePath storageLongPath = TreePath.FromHexString("abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789");
+
+        byte[] storage1ShortRlp = [0xc1, 0xaa];
+        byte[] storage1LongRlp = [0xc1, 0xab];
+        byte[] storage2ShortRlp = [0xc1, 0xbb];
+
+        // Write all trie nodes
+        using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
+        {
+            // State trie nodes (address=null)
+            writer.SetTrieNodes(null, in stateShortPath, new TrieNode(NodeType.Leaf, stateShortRlp));
+            writer.SetTrieNodes(null, in stateMediumPath, new TrieNode(NodeType.Leaf, stateMediumRlp));
+            writer.SetTrieNodes(null, in stateLongPath, new TrieNode(NodeType.Leaf, stateLongRlp));
+
+            // Storage trie nodes (with account address)
+            writer.SetTrieNodes(account1, in storageShortPath, new TrieNode(NodeType.Leaf, storage1ShortRlp));
+            writer.SetTrieNodes(account1, in storageLongPath, new TrieNode(NodeType.Leaf, storage1LongRlp));
+            writer.SetTrieNodes(account2, in storageShortPath, new TrieNode(NodeType.Leaf, storage2ShortRlp));
+        }
+
+        // Verify all nodes
+        using (var reader = _persistence.CreateReader())
+        {
+            // State trie nodes
+            Assert.That(reader.TryLoadRlp(null, in stateShortPath, ReadFlags.None), Is.EqualTo(stateShortRlp));
+            Assert.That(reader.TryLoadRlp(null, in stateMediumPath, ReadFlags.None), Is.EqualTo(stateMediumRlp));
+            Assert.That(reader.TryLoadRlp(null, in stateLongPath, ReadFlags.None), Is.EqualTo(stateLongRlp));
+
+            // Storage trie nodes - verify account isolation
+            Assert.That(reader.TryLoadRlp(account1, in storageShortPath, ReadFlags.None), Is.EqualTo(storage1ShortRlp));
+            Assert.That(reader.TryLoadRlp(account1, in storageLongPath, ReadFlags.None), Is.EqualTo(storage1LongRlp));
+            Assert.That(reader.TryLoadRlp(account2, in storageShortPath, ReadFlags.None), Is.EqualTo(storage2ShortRlp));
+
+            // State and storage at same path are separate
+            Assert.That(reader.TryLoadRlp(null, in storageShortPath, ReadFlags.None), Is.Null);
+        }
+    }
+
+    [Test]
+    public void TestTrieNodeSnapshot()
+    {
+        TreePath path = TreePath.FromHexString("abcdef");
+
+        byte[] rlpData1 = [0xc1, 0x01];
+        byte[] rlpData2 = [0xc1, 0x02];
+        byte[] rlpData3 = [0xc1, 0x03];
+
+        using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
+        {
+            writer.SetTrieNodes(null, in path, new TrieNode(NodeType.Leaf, rlpData1));
+        }
+        using var reader1 = _persistence.CreateReader();
+
+        using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
+        {
+            writer.SetTrieNodes(null, in path, new TrieNode(NodeType.Leaf, rlpData2));
+        }
+        using var reader2 = _persistence.CreateReader();
+
+        using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
+        {
+            writer.SetTrieNodes(null, in path, new TrieNode(NodeType.Leaf, rlpData3));
+        }
+        using var reader3 = _persistence.CreateReader();
+
+        Assert.That(reader1.TryLoadRlp(null, in path, ReadFlags.None), Is.EqualTo(rlpData1));
+        Assert.That(reader2.TryLoadRlp(null, in path, ReadFlags.None), Is.EqualTo(rlpData2));
+        Assert.That(reader3.TryLoadRlp(null, in path, ReadFlags.None), Is.EqualTo(rlpData3));
     }
 }

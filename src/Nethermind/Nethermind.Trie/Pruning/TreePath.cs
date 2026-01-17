@@ -414,6 +414,24 @@ public struct TreePath : IEquatable<TreePath>, IComparable<TreePath>
     {
         return Truncate(otherPath.Length) == otherPath;
     }
+
+    public readonly void EncodeWith8Byte(Span<byte> buffer)
+    {
+        Path.Bytes[..8].CopyTo(buffer);
+        byte lengthAsByte = (byte)Length;
+
+        // Pack length into lower 4 bits of last byte (upper 4 bits contain path data)
+        buffer[8 - 1] = (byte)((buffer[8 - 1] & 0xf0) | (lengthAsByte & 0x0f));
+    }
+
+    public readonly void EncodeWith6Byte(Span<byte> buffer)
+    {
+        Path.Bytes[..6].CopyTo(buffer);
+        byte lengthAsByte = (byte)Length;
+
+        // Pack length into lower 4 bits of last byte (upper 4 bits contain path data)
+        buffer[6 - 1] = (byte)((buffer[6 - 1] & 0xf0) | (lengthAsByte & 0x0f));
+    }
 }
 
 public static class TreePathExtensions

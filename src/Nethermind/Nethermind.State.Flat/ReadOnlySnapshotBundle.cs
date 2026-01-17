@@ -1,14 +1,17 @@
 // SPDX-FileCopyrightText: 2025 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Nethermind.Core;
 using Nethermind.Core.Collections;
 using Nethermind.Core.Crypto;
+using Nethermind.Core.Extensions;
 using Nethermind.Core.Utils;
 using Nethermind.Int256;
 using Nethermind.State.Flat.Persistence;
 using Nethermind.Trie;
+using Prometheus;
 
 namespace Nethermind.State.Flat;
 
@@ -22,6 +25,20 @@ public sealed class ReadOnlySnapshotBundle(
 {
     public int SnapshotCount => snapshots.Count;
     private bool _isDisposed;
+
+    private static Histogram _snapshotBundleTimes = DevMetric.Factory.CreateHistogram("readonly_snapshot_bundle_times", "aha", new HistogramConfiguration()
+    {
+        LabelNames = new[] { "type" },
+        Buckets = [1]
+    });
+
+    private static Histogram.Child _readAccountPersistence = _snapshotBundleTimes.WithLabels("account_persistence");
+    private static Histogram.Child _readAccountPersistenceNull = _snapshotBundleTimes.WithLabels("account_persistence_null");
+    private static Histogram.Child _readStoragePersistence = _snapshotBundleTimes.WithLabels("storage_persistence");
+    private static Histogram.Child _readStoragePersistenceNull = _snapshotBundleTimes.WithLabels("storage_persistence_null");
+
+    private static Histogram.Child _readStateRlp = _snapshotBundleTimes.WithLabels("state_rlp");
+    private static Histogram.Child _readStorageRlp = _snapshotBundleTimes.WithLabels("storage_rlp");
 
     public bool TryGetAccount(Address address, out Account? acc)
     {
@@ -37,7 +54,17 @@ public sealed class ReadOnlySnapshotBundle(
             }
         }
 
+        long sw = Stopwatch.GetTimestamp();
         acc = persistenceReader.GetAccount(address);
+        if (acc == null)
+        {
+            _readAccountPersistenceNull.Observe(Stopwatch.GetTimestamp() - sw);
+        }
+        else
+        {
+            _readAccountPersistence.Observe(Stopwatch.GetTimestamp() - sw);
+        }
+
         return true;
     }
 
@@ -82,8 +109,18 @@ public sealed class ReadOnlySnapshotBundle(
 
         SlotValue outSlotValue = new SlotValue();
 
+        long sw = Stopwatch.GetTimestamp();
         bool _ = persistenceReader.TryGetSlot(address, index, ref outSlotValue);
         value = outSlotValue.ToEvmBytes();
+
+        if (value is null || value.IsZero())
+        {
+            _readStoragePersistenceNull.Observe(Stopwatch.GetTimestamp() - sw);
+        }
+        else
+        {
+            _readStoragePersistence.Observe(Stopwatch.GetTimestamp() - sw);
+        }
 
         return true;
     }
@@ -133,7 +170,19 @@ public sealed class ReadOnlySnapshotBundle(
         GuardDispose();
 
         Nethermind.Trie.Pruning.Metrics.LoadedFromDbNodesCount++;
-        return persistenceReader.TryLoadRlp(address, path, flags);
+        long sw = Stopwatch.GetTimestamp();
+        var value =  persistenceReader.TryLoadRlp(address, path, flags);
+
+        if (address is null)
+        {
+            _readStateRlp.Observe(Stopwatch.GetTimestamp() - sw);
+        }
+        else
+        {
+            _readStorageRlp.Observe(Stopwatch.GetTimestamp() - sw);
+        }
+
+        return value;
     }
 
     private void GuardDispose()
