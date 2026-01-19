@@ -52,9 +52,6 @@ public interface IFlatDbConfig: IConfig
     [ConfigItem(Description = "Max pruning boundary", DefaultValue = "false")]
     int MaxPruningBoundary { get; set; }
 
-    [ConfigItem(Description = "Use flat bloom", DefaultValue = "false")]
-    bool EnableFlatBloom { get; set; }
-
     [ConfigItem(Description = "Warmup key by key", DefaultValue = "false")]
     bool WarmUpPersistence { get; set; }
 

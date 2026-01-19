@@ -209,9 +209,12 @@ public class FlatWorldStateModule(IFlatDbConfig flatDbConfig): Module
                 _logger.Warn($"Adjusting db {databaseName}, {columnName} with shared block cache");
 
                 string optionsOverride = config.RocksDbOptions;
-                if (_flatDbConfig.EnableFlatBloom)
+                if (_flatDbConfig.Layout == FlatLayout.FlatInTrie)
                 {
-                    optionsOverride = config.RocksDbOptions.Replace("optimize_filters_for_hits=false;", "optimize_filters_for_hits=true;");
+                    optionsOverride = config.RocksDbOptions +
+                                      "optimize_filters_for_hits=true;" +
+                                      "block_based_table_factory.partition_filters=true;" +
+                                      "block_based_table_factory.index_type=kTwoLevelIndexSearch;";
                 }
 
                 // Setup cache. No way to set hyperclockcache via config string, so we'll have to set it manually.
