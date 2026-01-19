@@ -9,28 +9,56 @@ using Nethermind.Trie;
 namespace Nethermind.State.Flat.Persistence;
 
 /// <summary>
-/// Common persistence logic for Trie. The trie is encoded with 4 different database (column db). This implementation
-/// exploit the fact that a vast majority of the key's TreePath have a length less than 15.
-/// This can be encoded with only 8 byte. The average length of the TreePath only increase by 1 if the num of key
-/// increase by 16x.
+/// Common persistence logic for Trie. The trie is encoded with 4 different database columns. This implementation
+/// exploits the fact that a vast majority of the key's TreePath have a length less than 15, which can be encoded
+/// with only 8 bytes. The average length of the TreePath only increases by 1 if the number of keys increases by 16x.
 ///
-/// To handle case where path length is greater than 15, a separate fallback column is used which add both state and storage nodes,
-/// with a prefix partition key to separate them.
+/// To handle cases where path length is greater than 15, a separate fallback column is used which stores both state
+/// and storage nodes, with a prefix partition key (0x00 or 0x01) to separate them.
 ///
-/// For storage, only 20 byte of the hashed address prefix is used. The first 4 byte is put in front while the remaining
-/// 16 byte is put at the end. This make rocksdb's index smaller due to shortened index key.
+/// For storage, only 20 bytes of the hashed address are used. The first 4 bytes are placed in front while the
+/// remaining 16 bytes are placed at the end. This makes RocksDB's index smaller due to shortened key prefix.
 ///
-/// StateNodesTop
-/// <3-byte-path>
+/// <code>
+/// === Main Columns (optimized for short paths) ===
 ///
-/// StateNodes
-/// <8-byte-path-with-length-in-last-nib>
+/// ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+/// │ StateNodesTop (path length 0-5)                                                          Total: 3 bytes    │
+/// ├──────────────┬──────────────┬──────────────────────────────────────────────────────────────────────────────┤
+/// │ Byte 0       │ Byte 1       │ Byte 2                                                                       │
+/// │ Path[0]      │ Path[1]      │ Path[2] upper 4 bits | Length lower 4 bits                                   │
+/// └──────────────┴──────────────┴──────────────────────────────────────────────────────────────────────────────┘
 ///
-/// StorageNodes
-/// <4-byte-addr-prefix><8-byte-path-with-length
+/// ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+/// │ StateNodes (path length 6-15)                                                            Total: 8 bytes    │
+/// ├────────────────────────────────────────┬────────────────────────────────────────────────────────────────────┤
+/// │ Bytes 0-6                              │ Byte 7                                                             │
+/// │ Path[0..7]                             │ Path[7] upper 4 bits | Length lower 4 bits                         │
+/// └────────────────────────────────────────┴────────────────────────────────────────────────────────────────────┘
 ///
+/// ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+/// │ StorageNodes (path length 0-15)                                                          Total: 28 bytes   │
+/// ├──────────────────────────┬───────────────────────────────────┬──────────────────────────────────────────────┤
+/// │ Bytes 0-3                │ Bytes 4-11                        │ Bytes 12-27                                  │
+/// │ Address[0..4]            │ Path via EncodeWith8Byte          │ Address[4..20]                               │
+/// └──────────────────────────┴───────────────────────────────────┴──────────────────────────────────────────────┘
 ///
-/// For storage, this can be lowered even further to 11 and 6 byte key
+/// === FallbackNodes Column (for long paths, prefix-partitioned) ===
+///
+/// ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+/// │ State nodes (path length 16+)                                                            Total: 34 bytes   │
+/// ├──────────────┬──────────────────────────────────────────────────────────────────┬───────────────────────────┤
+/// │ Byte 0       │ Bytes 1-32                                                       │ Byte 33                   │
+/// │ 0x00         │ Full 32-byte path                                                │ Path length               │
+/// └──────────────┴──────────────────────────────────────────────────────────────────┴───────────────────────────┘
+///
+/// ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+/// │ Storage nodes (path length 16+)                                                          Total: 54 bytes   │
+/// ├────────┬────────────────┬─────────────────────────────────┬─────────────┬───────────────────────────────────┤
+/// │ Byte 0 │ Bytes 1-4      │ Bytes 5-36                      │ Byte 37     │ Bytes 38-53                       │
+/// │ 0x01   │ Address[0..4]  │ Full 32-byte path               │ Path length │ Address[4..20]                    │
+/// └────────┴────────────────┴─────────────────────────────────┴─────────────┴───────────────────────────────────┘
+/// </code>
 /// </summary>
 public static class BaseTriePersistence
 {
@@ -87,9 +115,9 @@ public static class BaseTriePersistence
 
     internal static ReadOnlySpan<byte> EncodeShortenedStorageNodeKey(Span<byte> buffer, Hash256 addr, in TreePath path)
     {
-        // Looks like this <4-byte-address-prefix><6-byte-path-portion><16-byte-remaining-address>
+        // Looks like this <4-byte-address-prefix><8-byte-path-portion><16-byte-remaining-address>
         addr.Bytes[..StoragePrefixPortion].CopyTo(buffer);
-        path.EncodeWith6Byte(buffer[StoragePrefixPortion..]);
+        path.EncodeWith8Byte(buffer[StoragePrefixPortion..]);
         addr.Bytes[StoragePrefixPortion..StorageHashPrefixLength].CopyTo(buffer[(StoragePrefixPortion + ShortenedStoragePathLength)..]);
         return buffer[..ShortenedStorageNodesKeyLength];
     }
@@ -144,7 +172,7 @@ public static class BaseTriePersistence
             {
                 // Do the same for the fallback nodes, except that the key must be prefixed `1` also
                 Span<byte> firstKey = stackalloc byte[1 + StoragePrefixPortion];
-                Span<byte> lastKey = stackalloc byte[1 + ShortenedStorageNodesKeyLength + 1];
+                Span<byte> lastKey = stackalloc byte[FullStorageNodesKeyLength + 1];
                 firstKey.Fill(0x00);
                 lastKey.Fill(0xff);
                 firstKey[0] = 1;
@@ -153,13 +181,13 @@ public static class BaseTriePersistence
                 accountPath.Bytes[..StoragePrefixPortion].CopyTo(lastKey[1..]);
                 using (ISortedView storageNodeReader = fallbackNodesSnap.GetViewBetween(firstKey, lastKey))
                 {
-                    var storageNodeWriter = storageNodes;
+                    var fallbackNodeWriter = fallbackNodes;
                     while (storageNodeReader.MoveNext())
                     {
                         // Double check the end portion
-                        if (Bytes.AreEqual(storageNodeReader.CurrentKey[(1 + StoragePrefixPortion + FullPathLength)..], accountPath.Bytes[StoragePrefixPortion..(StorageHashPrefixLength)]))
+                        if (Bytes.AreEqual(storageNodeReader.CurrentKey[(1 + StoragePrefixPortion + FullPathLength + PathLengthLength)..], accountPath.Bytes[StoragePrefixPortion..(StorageHashPrefixLength)]))
                         {
-                            storageNodeWriter.Remove(storageNodeReader.CurrentKey);
+                            fallbackNodeWriter.Remove(storageNodeReader.CurrentKey);
                         }
                     }
                 }
