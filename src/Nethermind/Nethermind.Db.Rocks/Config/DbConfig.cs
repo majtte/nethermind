@@ -44,11 +44,7 @@ public class DbConfig : IDbConfig
         "max_compaction_bytes=4000000000;" +
 
         "compression=kSnappyCompression;" +
-
-        // Note, if this is set, then other Db cannot override it. It save a little bit of space by not creating
-        // bloom filter for the last level.
-        // "optimize_filters_for_hits=true;"
-
+        "optimize_filters_for_hits=true;" +
         "advise_random_on_open=true;" +
 
         // Target size of each SST file. Increase to reduce number of file. Default is 64MB.
@@ -177,8 +173,6 @@ public class DbConfig : IDbConfig
         "allow_concurrent_memtable_write=false;";
     public string? CodeDbAdditionalRocksDbOptions { get; set; }
 
-    public ulong? MetadataDbRowCacheSize { get; set; }
-
     public string BloomDbRocksDbOptions { get; set; } =
         "max_bytes_for_level_base=16000000;";
     public string? BloomDbAdditionalRocksDbOptions { get; set; }
@@ -237,15 +231,14 @@ public class DbConfig : IDbConfig
         // Note: This causes write batch to not be atomic. A concurrent read may read item on start of batch, but not end of batch.
         // With state, this is fine as writes are done in parallel batch and therefore, not atomic, and the read goes
         // through triestore first anyway.
-        // "unordered_write=true;" +
+        "unordered_write=true;" +
 
         // Default is 1 MB.
         "max_write_batch_group_size_bytes=4000000;" +
 
-        "optimize_filters_for_hits=true;" +
+        // Dont do periodic compaction
         "ttl=0;" +
         "periodic_compaction_seconds=0;" +
-
         "";
 
     public string StateDbLargeMemoryRocksDbOptions { get; set; } =
@@ -287,7 +280,7 @@ public class DbConfig : IDbConfig
 
     public ulong FlatDbWriteBufferSize { get; set; } = (ulong)64.MB();
     public ulong FlatDbWriteBufferNumber { get; set; } = 4;
-    public bool? FlatDbVerifyChecksum { get; set; } = false; // YOLO
+    public bool? FlatDbVerifyChecksum { get; set; } = true;
     public bool FlatDbEnableFileWarmer { get; set; }
     public string FlatDbRocksDbOptions { get; set; } =
         // This is basically useless on write only database. However, for halfpath with live pruning, flatdb, or

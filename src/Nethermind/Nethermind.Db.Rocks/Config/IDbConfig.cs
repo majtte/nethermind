@@ -76,7 +76,6 @@ public interface IDbConfig : IConfig
 
     string MetadataDbRocksDbOptions { get; set; }
     string? MetadataDbAdditionalRocksDbOptions { get; set; }
-    ulong? MetadataDbRowCacheSize { get; set; }
 
     string BloomDbRocksDbOptions { get; set; }
     string? BloomDbAdditionalRocksDbOptions { get; set; }
