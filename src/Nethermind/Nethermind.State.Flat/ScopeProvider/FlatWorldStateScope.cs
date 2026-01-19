@@ -75,12 +75,12 @@ public sealed class FlatWorldStateScope : IWorldStateScopeProvider.IScope, ITrie
             new StateTrieStoreAdapter(snapshotBundle, _concurrencyQuota, false),
             logManager
         );
-        _stateTree.RootHash = currentStateId.stateRoot.ToCommitment();
+        _stateTree.RootHash = currentStateId.StateRoot.ToCommitment();
         _warmupStateTree = new PatriciaTree(
             new StateTrieStoreAdapter(snapshotBundle, _concurrencyQuota, true),
             logManager
         );
-        _warmupStateTree.RootHash = currentStateId.stateRoot.ToCommitment();
+        _warmupStateTree.RootHash = currentStateId.StateRoot.ToCommitment();
 
         _configuration = configuration;
         _logManager = logManager;

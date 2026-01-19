@@ -43,7 +43,7 @@ public class SnapshotCompactor(
     public SnapshotPooledList GetSnapshotsToCompact(Snapshot snapshot)
     {
         if (_compactSize <= 1) return SnapshotPooledList.Empty(); // Disabled
-        long blockNumber = snapshot.To.blockNumber;
+        long blockNumber = snapshot.To.BlockNumber;
         if (blockNumber == 0) return SnapshotPooledList.Empty();
 
         bool isFullCompaction = blockNumber % _compactSize == 0;
@@ -53,7 +53,7 @@ public class SnapshotCompactor(
         if (isMidCompaction)
         {
             StateId? last = snapshotRepository.GetLastSnapshotId();
-            if (last != null && last.Value.blockNumber - blockNumber > 1)
+            if (last != null && last.Value.BlockNumber - blockNumber > 1)
             {
                 _tooSlowSkip.Inc();
                 // To slow. Just skip this block number.
@@ -91,9 +91,9 @@ public class SnapshotCompactor(
                 return SnapshotPooledList.Empty();
             }
 
-            if (snapshots[0].From.blockNumber != startingBlockNumber)
+            if (snapshots[0].From.BlockNumber != startingBlockNumber)
             {
-                _logger.Warn($"Unable to compile snapshots to compact. {snapshots[0].From.blockNumber} -> {snapshots[^1].To.blockNumber}");
+                _logger.Warn($"Unable to compile snapshots to compact. {snapshots[0].From.BlockNumber} -> {snapshots[^1].To.BlockNumber}");
                 // unable to compile list of snapshot for the whole thing
                 return SnapshotPooledList.Empty();
             }
@@ -123,7 +123,7 @@ public class SnapshotCompactor(
         StateId to = snapshots[^1].To;
         StateId from = snapshots[0].From;
 
-        ResourcePool.Usage usage = (to.blockNumber % _compactSize == 0)
+        ResourcePool.Usage usage = (to.BlockNumber % _compactSize == 0)
             ? ResourcePool.Usage.Compactor
             : ResourcePool.Usage.MidCompactor;
 

@@ -51,8 +51,8 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
     internal static void SetCurrentState(IWriteOnlyKeyValueStore kv, StateId stateId)
     {
         Span<byte> bytes = stackalloc byte[8 + 32];
-        BinaryPrimitives.WriteInt64BigEndian(bytes[..8], stateId.blockNumber);
-        stateId.stateRoot.BytesAsSpan.CopyTo(bytes[8..]);
+        BinaryPrimitives.WriteInt64BigEndian(bytes[..8], stateId.BlockNumber);
+        stateId.StateRoot.BytesAsSpan.CopyTo(bytes[8..]);
 
         kv.PutSpan(CurrentStateKey, bytes);
     }

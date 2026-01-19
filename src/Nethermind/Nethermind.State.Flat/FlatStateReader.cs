@@ -71,7 +71,7 @@ public class FlatStateReader(
         ReadOnlyStateTrieStoreAdapter trieStoreAdapter = new(reader);
 
         PatriciaTree patriciaTree = new PatriciaTree(trieStoreAdapter, logManager);
-        patriciaTree.Accept(treeVisitor, stateId.stateRoot.ToCommitment(), visitingOptions);
+        patriciaTree.Accept(treeVisitor, stateId.StateRoot.ToCommitment(), visitingOptions);
     }
 
     public bool HasStateForBlock(BlockHeader? baseBlock)

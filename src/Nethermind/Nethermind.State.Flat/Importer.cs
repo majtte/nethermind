@@ -49,7 +49,7 @@ public class Importer(
 
         ITrieStore trieStore = new RawTrieStore(nodeStorage);
         PatriciaTree tree =  new PatriciaTree(trieStore, logManager);
-        tree.RootHash = to.stateRoot.ToHash256();
+        tree.RootHash = to.StateRoot.ToHash256();
 
         Channel<Entry> channel = Channel.CreateBounded<Entry>(2_000_000);
         _logger.Warn("Starting import");
@@ -60,7 +60,7 @@ public class Importer(
         {
             try
             {
-                tree.Accept(new Visitor(channel.Writer), to.stateRoot.ToHash256(), new VisitingOptions()
+                tree.Accept(new Visitor(channel.Writer), to.StateRoot.ToHash256(), new VisitingOptions()
                 {
                     MaxDegreeOfParallelism = 4,
                 });

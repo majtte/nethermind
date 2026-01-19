@@ -147,18 +147,18 @@ public class FlatDbManager : IFlatDbManager, IAsyncDisposable
                 // Actually do the compaction
                 _snapshotCompactor.DoCompactSnapshot(snapshot);
 
-                if (stateId.blockNumber % _compactSize == 0 || stateId.blockNumber % _midCompactSize == 0)
+                if (stateId.BlockNumber % _compactSize == 0 || stateId.BlockNumber % _midCompactSize == 0)
                 {
                     ClearReadOnlyBundleCache();
                 }
 
-                if (stateId.blockNumber % _compactSize == 0)
+                if (stateId.BlockNumber % _compactSize == 0)
                 {
                     _flatdiffimes.WithLabels("compact", "do_compact_full").Observe(Stopwatch.GetTimestamp() - sw);
                 }
                 else
                 {
-                    if (stateId.blockNumber % _midCompactSize == 0)
+                    if (stateId.BlockNumber % _midCompactSize == 0)
                     {
                         _flatdiffimes.WithLabels("compact", "do_mid_compact").Observe(Stopwatch.GetTimestamp() - sw);
                     }
@@ -170,7 +170,7 @@ public class FlatDbManager : IFlatDbManager, IAsyncDisposable
             }
 
             sw = Stopwatch.GetTimestamp();
-            if (stateId.blockNumber % _compactSize == 0)
+            if (stateId.BlockNumber % _compactSize == 0)
             {
                 _snapshotCount.WithLabels("snapshots").Set(_snapshotRepository.SnapshotCount);
                 _snapshotCount.WithLabels("compacted_snapshots").Set(_snapshotRepository.CompactedSnapshotCount);
@@ -225,7 +225,7 @@ public class FlatDbManager : IFlatDbManager, IAsyncDisposable
 
         ClearReadOnlyBundleCache();
 
-        ReorgBoundaryReached?.Invoke(this, new ReorgBoundaryReached(currentPersistedStateId.blockNumber));
+        ReorgBoundaryReached?.Invoke(this, new ReorgBoundaryReached(currentPersistedStateId.BlockNumber));
     }
 
     private async Task RunTrieCachePopulator(CancellationToken cancellationToken)
@@ -318,7 +318,7 @@ public class FlatDbManager : IFlatDbManager, IAsyncDisposable
         StateId persistedState = _persistenceManager.GetCurrentPersistedStateId();
 
         StateId current = baseBlock;
-        SnapshotPooledList snapshots = _snapshotRepository.AssembleSnapshotsUntil(baseBlock, persistedState.blockNumber, Math.Max(1, (int)(_snapshotRepository.SnapshotCount / _compactSize)));
+        SnapshotPooledList snapshots = _snapshotRepository.AssembleSnapshotsUntil(baseBlock, persistedState.BlockNumber, Math.Max(1, (int)(_snapshotRepository.SnapshotCount / _compactSize)));
         _flatdiffimes.WithLabels("gather_readonly_cache", "gather").Observe(Stopwatch.GetTimestamp() - sw);
         sw =  Stopwatch.GetTimestamp();
         _knownStatesSize.Observe(snapshots.Count);
@@ -326,13 +326,13 @@ public class FlatDbManager : IFlatDbManager, IAsyncDisposable
         // Note: By the time the previous loop finished checking all state, the persistencc may have added new state and removed some
         // entry in `_inMemorySnapshotStore`. Meaning, this need to be here instead of before the loop.
         IPersistence.IPersistenceReader persistenceReader = _persistenceManager.LeaseReader();
-        if (current != baseBlock && persistenceReader.CurrentState.blockNumber != -1 && current.blockNumber > persistenceReader.CurrentState.blockNumber)
+        if (current != baseBlock && persistenceReader.CurrentState.BlockNumber != -1 && current.BlockNumber > persistenceReader.CurrentState.BlockNumber)
         {
             persistenceReader.Dispose();
             throw new Exception($"Non consecutive snapshots. Current {current} vs {persistenceReader.CurrentState}, {persistedState}, {baseBlock}");
         }
 
-        if (persistenceReader.CurrentState.blockNumber > baseBlock.blockNumber)
+        if (persistenceReader.CurrentState.BlockNumber > baseBlock.BlockNumber)
         {
             persistenceReader.Dispose();
             throw new InvalidOperationException($"Unable to prepare state before persisted state. Persisted state: {persistenceReader.CurrentState}, requested state: {baseBlock}");
@@ -395,12 +395,12 @@ public class FlatDbManager : IFlatDbManager, IAsyncDisposable
         _flatdiffimes.WithLabels("add_snapshot", "repolock").Observe(Stopwatch.GetTimestamp() - sw);
         sw = Stopwatch.GetTimestamp();
 
-        if (_logger.IsTrace) _logger.Trace($"Registering {startingBlock.blockNumber} to {endBlock.blockNumber}");
+        if (_logger.IsTrace) _logger.Trace($"Registering {startingBlock.BlockNumber} to {endBlock.BlockNumber}");
         StateId persistedStateId = _persistenceManager.GetCurrentPersistedStateId();
-        if (endBlock.blockNumber <= persistedStateId.blockNumber)
+        if (endBlock.BlockNumber <= persistedStateId.BlockNumber)
         {
             _logger.Warn(
-                $"Cannot register snapshot earlier than bigcache. Snapshot number {endBlock.blockNumber}, bigcache number: {persistedStateId}");
+                $"Cannot register snapshot earlier than bigcache. Snapshot number {endBlock.BlockNumber}, bigcache number: {persistedStateId}");
             return;
         }
 

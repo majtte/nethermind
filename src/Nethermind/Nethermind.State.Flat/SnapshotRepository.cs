@@ -41,7 +41,7 @@ public class SnapshotRepository(ILogManager logManager) : ISnapshotRepository
         {
             if (_logger.IsTrace) _logger.Trace($"Got {snapshot.From} -> {snapshot.To}");
 
-            if (snapshot.From.blockNumber < startingBlockNumber)
+            if (snapshot.From.BlockNumber < startingBlockNumber)
             {
                 // `snapshot` is now a compacted snapshot, we dont want to use it.
                 snapshot.Dispose();
@@ -60,7 +60,7 @@ public class SnapshotRepository(ILogManager logManager) : ISnapshotRepository
             }
 
             current = snapshot.From;
-            if (snapshot.From.blockNumber == startingBlockNumber)
+            if (snapshot.From.BlockNumber == startingBlockNumber)
             {
                 break;
             }
@@ -207,7 +207,7 @@ public class SnapshotRepository(ILogManager logManager) : ISnapshotRepository
         using ReadWriteLockBox<SortedSet<StateId>>.LockExitor _ = _sortedKnownStates.EnterReadLock(out SortedSet<StateId> sortedSnapashots);
 
         return sortedSnapashots
-            .GetViewBetween(new StateId(0, Hash256.Zero), new StateId(stateId.blockNumber, Keccak.MaxValue))
+            .GetViewBetween(new StateId(0, Hash256.Zero), new StateId(stateId.BlockNumber, Keccak.MaxValue))
             .ToPooledList(0);
     }
 

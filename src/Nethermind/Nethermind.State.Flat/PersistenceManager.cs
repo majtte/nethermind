@@ -172,7 +172,7 @@ public class PersistenceManager: IAsyncDisposable
 
         foreach (var stateId in compactedStates)
         {
-            if (stateId.stateRoot != finalizedStateRoot) continue;
+            if (stateId.StateRoot != finalizedStateRoot) continue;
 
             Snapshot? snapshot;
             if (compactedSnapshot)
@@ -229,11 +229,11 @@ public class PersistenceManager: IAsyncDisposable
     internal Snapshot? DetermineSnapshotToPersist(StateId latestSnapshot)
     {
         // Actually the latest compacted snapshot, not the latest snapshot.
-        long lastSnapshotNumber = latestSnapshot.blockNumber;
+        long lastSnapshotNumber = latestSnapshot.BlockNumber;
 
         StateId currentPersistedState = GetCurrentPersistedStateId();
         long finalizedBlockNumber = _finalizedStateProvider.FinalizedBlockNumber;
-        long inMemoryStateDepth = lastSnapshotNumber - currentPersistedState.blockNumber;
+        long inMemoryStateDepth = lastSnapshotNumber - currentPersistedState.BlockNumber;
         long afterPersistStateDepth = inMemoryStateDepth - _compactSize;
         if (afterPersistStateDepth < _minimumPruningBoundary)
         {
@@ -243,7 +243,7 @@ public class PersistenceManager: IAsyncDisposable
 
         Snapshot? snapshotToPersist;
 
-        long afterPersistPersistedBlockNumber = currentPersistedState.blockNumber + _compactSize;
+        long afterPersistPersistedBlockNumber = currentPersistedState.BlockNumber + _compactSize;
         if (afterPersistPersistedBlockNumber > finalizedBlockNumber)
         {
             // Unfinalized
@@ -253,13 +253,13 @@ public class PersistenceManager: IAsyncDisposable
             }
 
             _logger.Warn($"Very long unfinalized state. Force persisting to conserve memory. finalized block number is {finalizedBlockNumber}.");
-            snapshotToPersist = GetFirstSnapshotAtBlockNumber(currentPersistedState.blockNumber + _compactSize, currentPersistedState, true) ??
-                                GetFirstSnapshotAtBlockNumber(currentPersistedState.blockNumber + 1, currentPersistedState, false);
+            snapshotToPersist = GetFirstSnapshotAtBlockNumber(currentPersistedState.BlockNumber + _compactSize, currentPersistedState, true) ??
+                                GetFirstSnapshotAtBlockNumber(currentPersistedState.BlockNumber + 1, currentPersistedState, false);
         }
         else
         {
-            snapshotToPersist = GetFinalizedSnapshotAtBlockNumber(currentPersistedState.blockNumber + _compactSize, currentPersistedState, true) ??
-                                GetFinalizedSnapshotAtBlockNumber(currentPersistedState.blockNumber + 1, currentPersistedState, false);
+            snapshotToPersist = GetFinalizedSnapshotAtBlockNumber(currentPersistedState.BlockNumber + _compactSize, currentPersistedState, true) ??
+                                GetFinalizedSnapshotAtBlockNumber(currentPersistedState.BlockNumber + 1, currentPersistedState, false);
         }
 
         if (snapshotToPersist is null)
@@ -293,7 +293,7 @@ public class PersistenceManager: IAsyncDisposable
 
     internal void PersistSnapshot(Snapshot snapshot)
     {
-        long compactLength = snapshot.To.blockNumber! - snapshot.From.blockNumber!;
+        long compactLength = snapshot.To.BlockNumber! - snapshot.From.BlockNumber!;
         if (compactLength != _compactSize)
         {
             _logger.Warn($"ccompact length is {compactLength}");

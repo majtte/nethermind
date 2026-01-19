@@ -81,8 +81,8 @@ public class SnapshotCompactorTests
 
         using var compacted = _compactor.CompactSnapshotBundle(snapshots);
 
-        Assert.That(compacted.From.blockNumber, Is.EqualTo(0));
-        Assert.That(compacted.To.blockNumber, Is.EqualTo(1));
+        Assert.That(compacted.From.BlockNumber, Is.EqualTo(0));
+        Assert.That(compacted.To.BlockNumber, Is.EqualTo(1));
     }
 
     [Test]

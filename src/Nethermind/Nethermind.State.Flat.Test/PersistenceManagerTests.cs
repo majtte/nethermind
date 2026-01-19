@@ -135,7 +135,7 @@ public class PersistenceManagerTests
         StateId target = CreateStateId(targetBlock);
 
         _finalizedStateProvider.SetFinalizedBlockNumber(100);
-        _finalizedStateProvider.SetFinalizedStateRootAt(targetBlock, new Hash256(target.stateRoot.Bytes));
+        _finalizedStateProvider.SetFinalizedStateRootAt(targetBlock, new Hash256(target.StateRoot.Bytes));
 
         // Create snapshot (compacted or not based on parameter)
         using var expectedSnapshot = CreateSnapshot(persisted, target, compacted: useCompacted);
@@ -206,7 +206,7 @@ public class PersistenceManagerTests
         StateId persisted = Block0;
         StateId latest = CreateStateId(100);
         _finalizedStateProvider.SetFinalizedBlockNumber(100);
-        _finalizedStateProvider.SetFinalizedStateRootAt(16, new Hash256(CreateStateId(16).stateRoot.Bytes));
+        _finalizedStateProvider.SetFinalizedStateRootAt(16, new Hash256(CreateStateId(16).StateRoot.Bytes));
 
         // Don't create any snapshots
 
@@ -224,7 +224,7 @@ public class PersistenceManagerTests
         StateId wrongFrom = CreateStateId(5);
         StateId target = CreateStateId(16);
         _finalizedStateProvider.SetFinalizedBlockNumber(100);
-        _finalizedStateProvider.SetFinalizedStateRootAt(16, new Hash256(target.stateRoot.Bytes));
+        _finalizedStateProvider.SetFinalizedStateRootAt(16, new Hash256(target.StateRoot.Bytes));
 
         // Create snapshot with wrong "from" state
         using var wrongSnapshot = CreateSnapshot(wrongFrom, target, compacted: true);
@@ -243,7 +243,7 @@ public class PersistenceManagerTests
         StateId target1 = CreateStateId(16, rootByte: 1);
         StateId target2 = CreateStateId(16, rootByte: 2); // Different root
         _finalizedStateProvider.SetFinalizedBlockNumber(100);
-        _finalizedStateProvider.SetFinalizedStateRootAt(16, new Hash256(target2.stateRoot.Bytes)); // target2 is finalized
+        _finalizedStateProvider.SetFinalizedStateRootAt(16, new Hash256(target2.StateRoot.Bytes)); // target2 is finalized
 
         // Create both snapshots
         using var snapshot1 = CreateSnapshot(persisted, target1, compacted: true);
@@ -252,7 +252,7 @@ public class PersistenceManagerTests
         var result = _persistenceManager.DetermineSnapshotToPersist(latest);
 
         Assert.That(result, Is.Not.Null);
-        Assert.That(result!.To.stateRoot.Bytes.ToArray(), Is.EqualTo(target2.stateRoot.Bytes.ToArray())); // Should select finalized one
+        Assert.That(result!.To.StateRoot.Bytes.ToArray(), Is.EqualTo(target2.StateRoot.Bytes.ToArray())); // Should select finalized one
 
         result.Dispose();
     }
@@ -280,7 +280,7 @@ public class PersistenceManagerTests
         StateId latest = CreateStateId(80);
         StateId target = CreateStateId(16);
         _finalizedStateProvider.SetFinalizedBlockNumber(100);
-        _finalizedStateProvider.SetFinalizedStateRootAt(16, new Hash256(target.stateRoot.Bytes));
+        _finalizedStateProvider.SetFinalizedStateRootAt(16, new Hash256(target.StateRoot.Bytes));
 
         using var expectedSnapshot = CreateSnapshot(persisted, target, compacted: true);
 
@@ -384,7 +384,7 @@ public class PersistenceManagerTests
         using var snapshot = CreateSnapshot(from, to, compacted: true);
 
         _finalizedStateProvider.SetFinalizedBlockNumber(100);
-        _finalizedStateProvider.SetFinalizedStateRootAt(16, new Hash256(to.stateRoot.Bytes));
+        _finalizedStateProvider.SetFinalizedStateRootAt(16, new Hash256(to.StateRoot.Bytes));
 
         var writeBatch = Substitute.For<IPersistence.IWriteBatch>();
         _persistence.CreateWriteBatch(Arg.Any<StateId>(), Arg.Any<StateId>()).Returns(writeBatch);
