@@ -13,8 +13,8 @@ namespace Nethermind.State.Flat.Persistence;
 
 public class RefCountingPersistenceReader : RefCountingDisposable, IPersistence.IPersistenceReader
 {
+    private const int Disposing = -1; // Same as parent's constant
     private readonly IPersistence.IPersistenceReader _innerReader;
-    private bool _isDisposed = false;
 
     public RefCountingPersistenceReader(IPersistence.IPersistenceReader innerReader, ILogger logger)
     {
@@ -25,7 +25,7 @@ public class RefCountingPersistenceReader : RefCountingDisposable, IPersistence.
             // Reader should be re-created every block unless something holds it for very long.
             // It prevent database compaction, so this need to be closed eventually.
             await Task.Delay(60_000);
-            if (!_isDisposed)
+            if (Volatile.Read(ref _leases.Value) != Disposing)
             {
                 if (logger.IsWarn) logger.Warn($"Unexpected old snapshot created. Lease count {_leases.Value}");
             }
@@ -66,7 +66,6 @@ public class RefCountingPersistenceReader : RefCountingDisposable, IPersistence.
 
     protected override void CleanUp()
     {
-        _isDisposed = true;
         _innerReader.Dispose();
     }
 

@@ -79,7 +79,7 @@ public class SnapshotRepository(ILogManager logManager) : ISnapshotRepository
             if (entry.TryAcquire()) return true;
             attempt++;
             sw.SpinOnce();
-            if (attempt > MaxLeaseAttempt) throw new Exception($"Unable to acquire lease on compacted state {stateId}");
+            if (attempt > MaxLeaseAttempt) throw new InvalidOperationException($"Unable to acquire lease on compacted state {stateId}");
         }
         return false;
     }
@@ -93,7 +93,7 @@ public class SnapshotRepository(ILogManager logManager) : ISnapshotRepository
             if (entry.TryAcquire()) return true;
             attempt++;
             sw.SpinOnce();
-            if (attempt > MaxLeaseAttempt) throw new Exception($"Unable to acquire lease on state {stateId}");
+            if (attempt > MaxLeaseAttempt) throw new InvalidOperationException($"Unable to acquire lease on state {stateId}");
         }
         return false;
     }

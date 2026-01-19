@@ -60,42 +60,50 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
     public IPersistence.IPersistenceReader CreateReader()
     {
         var snapshot = _db.CreateSnapshot();
-        var trieReader = new BaseTriePersistence.Reader(
-            snapshot.GetColumn(FlatDbColumns.StateTopNodes),
-            snapshot.GetColumn(FlatDbColumns.StateNodes),
-            snapshot.GetColumn(FlatDbColumns.StorageNodes),
-            snapshot.GetColumn(FlatDbColumns.FallbackNodes)
-        );
-
-        var currentState = ReadCurrentState(snapshot.GetColumn(FlatDbColumns.Metadata));
-
-        IReadOnlyKeyValueStore state;
-        IReadOnlyKeyValueStore storage;
-        if (_configuration.FlatInTrie)
+        try
         {
-            state = snapshot.GetColumn(FlatDbColumns.StateNodes);
-            storage = snapshot.GetColumn(FlatDbColumns.StorageNodes);
-        }
-        else
-        {
-            state = snapshot.GetColumn(FlatDbColumns.Account);
-            storage = snapshot.GetColumn(FlatDbColumns.Storage);
-        }
+            var trieReader = new BaseTriePersistence.Reader(
+                snapshot.GetColumn(FlatDbColumns.StateTopNodes),
+                snapshot.GetColumn(FlatDbColumns.StateNodes),
+                snapshot.GetColumn(FlatDbColumns.StorageNodes),
+                snapshot.GetColumn(FlatDbColumns.FallbackNodes)
+            );
 
-        return new BasePersistence.Reader<BasePersistence.ToHashedFlatReader<BaseFlatPersistence.Reader>, BaseTriePersistence.Reader>(
-            new BasePersistence.ToHashedFlatReader<BaseFlatPersistence.Reader>(
-                new BaseFlatPersistence.Reader(
-                    state,
-                    storage
-                )
-            ),
-            trieReader,
-            currentState,
-            new Reactive.AnonymousDisposable(() =>
+            var currentState = ReadCurrentState(snapshot.GetColumn(FlatDbColumns.Metadata));
+
+            IReadOnlyKeyValueStore state;
+            IReadOnlyKeyValueStore storage;
+            if (_configuration.FlatInTrie)
             {
-                snapshot.Dispose();
-            })
-        );
+                state = snapshot.GetColumn(FlatDbColumns.StateNodes);
+                storage = snapshot.GetColumn(FlatDbColumns.StorageNodes);
+            }
+            else
+            {
+                state = snapshot.GetColumn(FlatDbColumns.Account);
+                storage = snapshot.GetColumn(FlatDbColumns.Storage);
+            }
+
+            return new BasePersistence.Reader<BasePersistence.ToHashedFlatReader<BaseFlatPersistence.Reader>, BaseTriePersistence.Reader>(
+                new BasePersistence.ToHashedFlatReader<BaseFlatPersistence.Reader>(
+                    new BaseFlatPersistence.Reader(
+                        state,
+                        storage
+                    )
+                ),
+                trieReader,
+                currentState,
+                new Reactive.AnonymousDisposable(() =>
+                {
+                    snapshot.Dispose();
+                })
+            );
+        }
+        catch
+        {
+            snapshot.Dispose();
+            throw;
+        }
     }
 
     public IPersistence.IWriteBatch CreateWriteBatch(StateId from, StateId to, WriteFlags flags)

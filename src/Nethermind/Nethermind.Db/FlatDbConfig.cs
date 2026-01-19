@@ -24,7 +24,6 @@ public class FlatDbConfig: IFlatDbConfig
     public bool ImportOnStateSyncFinished { get; set; } = false;
     public bool GeneratePreimage { get; set; } = false;
     public int MaxPruningBoundary { get; set; } = 1024;
-    public bool EnableFlatBloom { get; set; } = false;
     public bool WarmUpPersistence { get; set; } = false;
     public int TrieWarmerWorkerCount { get; set; } = -1;
 }

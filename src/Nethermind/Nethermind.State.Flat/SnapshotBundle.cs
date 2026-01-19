@@ -504,20 +504,33 @@ public sealed class SnapshotBundle : IDisposable
 
         if (!isNewAccount)
         {
+            // Collect keys first to avoid modifying during iteration
+            ArrayPoolListRef<(Hash256AsKey, TreePath)> storageKeysToRemove = new (0);
             foreach (var kv in _changedStorageNodes)
             {
                 if (kv.Key.Item1.Value == addressHash)
                 {
-                    _changedStorageNodes.TryRemove(kv.Key, out TrieNode? _);
+                    storageKeysToRemove.Add(kv.Key);
                 }
             }
 
+            foreach (var key in storageKeysToRemove)
+            {
+                _changedStorageNodes.TryRemove(key, out _);
+            }
+
+            ArrayPoolListRef<(AddressAsKey, UInt256)> slotKeysToRemove = new (0);
             foreach (var kv in _changedSlots)
             {
                 if (kv.Key.Item1.Value == address)
                 {
-                    _changedSlots.TryRemove(kv.Key, out _);
+                    slotKeysToRemove.Add(kv.Key);
                 }
+            }
+
+            foreach (var key in slotKeysToRemove)
+            {
+                _changedSlots.TryRemove(key, out _);
             }
         }
     }
@@ -591,7 +604,6 @@ public sealed class SnapshotBundle : IDisposable
     {
         if (Interlocked.CompareExchange(ref _isDisposed, true, false)) return;
 
-        _isDisposed = true;
         _snapshots.Dispose();
 
         // Null them in case unexpected mutation from trie warmer

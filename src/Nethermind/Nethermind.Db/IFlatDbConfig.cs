@@ -13,10 +13,10 @@ public interface IFlatDbConfig: IConfig
     [ConfigItem(Description = "Import from pruning trie state db", DefaultValue = "false")]
     bool ImportFromPruningTrieState { get; set; }
 
-    [ConfigItem(Description = "Pruning boundary", DefaultValue = "256")]
+    [ConfigItem(Description = "Pruning boundary", DefaultValue = "128")]
     int PruningBoundary { get; set; }
 
-    [ConfigItem(Description = "Compact size", DefaultValue = "16")]
+    [ConfigItem(Description = "Compact size", DefaultValue = "32")]
     int CompactSize { get; set; }
 
     [ConfigItem(Description = "Compact interval", DefaultValue = "4")]
@@ -34,10 +34,10 @@ public interface IFlatDbConfig: IConfig
     [ConfigItem(Description = "Inline compaction", DefaultValue = "false")]
     bool InlineCompaction { get; set; }
 
-    [ConfigItem(Description = "Trie cache memory target", DefaultValue = "false")]
+    [ConfigItem(Description = "Trie cache memory target", DefaultValue = "536870912")]
     long TrieCacheMemoryTarget { get; set; }
 
-    [ConfigItem(Description = "Use preimage", DefaultValue = "false")]
+    [ConfigItem(Description = "Flat db layout", DefaultValue = "Flat")]
     FlatLayout Layout { get; set; }
 
     [ConfigItem(Description = "Block cache size budget", DefaultValue = "1000000000")]
@@ -49,7 +49,7 @@ public interface IFlatDbConfig: IConfig
     [ConfigItem(Description = "Generate preimage", DefaultValue = "false")]
     bool GeneratePreimage { get; set; }
 
-    [ConfigItem(Description = "Max pruning boundary", DefaultValue = "false")]
+    [ConfigItem(Description = "Max pruning boundary", DefaultValue = "1024")]
     int MaxPruningBoundary { get; set; }
 
     [ConfigItem(Description = "Warmup key by key", DefaultValue = "false")]

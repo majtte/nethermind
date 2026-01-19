@@ -57,12 +57,6 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
         yield return new TestConfiguration(new FlatDbConfig()
         {
             Enabled = true,
-            Layout = FlatLayout.Flat,
-            EnableFlatBloom = true
-        }, "FlatWithBloom");
-        yield return new TestConfiguration(new FlatDbConfig()
-        {
-            Enabled = true,
             Layout = FlatLayout.FlatInTrie
         }, "FlatInTrie");
         yield return new TestConfiguration(new FlatDbConfig()

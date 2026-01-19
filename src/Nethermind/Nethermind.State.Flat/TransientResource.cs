@@ -37,8 +37,17 @@ public record TransientResource(TransientResource.Size size): IDisposable, IRese
         if (PrewarmedAddresses.Count > PrewarmedAddresses.Capacity)
         {
             long newCapacity = (long)BitOperations.RoundUpToPowerOf2((ulong)PrewarmedAddresses.Count);
-            PrewarmedAddresses.Dispose();
-            PrewarmedAddresses = new BloomFilter(newCapacity, PrewarmedAddresses.BitsPerKey);
+            double bitsPerKey = PrewarmedAddresses.BitsPerKey;
+            BloomFilter oldFilter = PrewarmedAddresses;
+            PrewarmedAddresses = null!;
+            try
+            {
+                oldFilter.Dispose();
+            }
+            finally
+            {
+                PrewarmedAddresses = new BloomFilter(newCapacity, bitsPerKey);
+            }
         }
         else
         {
