@@ -87,7 +87,6 @@ namespace Nethermind.Blockchain.Synchronization
         public bool EnableSnapSyncStorageRangeSplit { get; set; } = false;
         public long ForwardSyncDownloadBufferMemoryBudget { get; set; } = 200.MiB();
         public long ForwardSyncBlockProcessingQueueMemoryBudget { get; set; } = 200.MiB();
-        public int MaxLookupBack { get; set; } = 128;
 
         public override string ToString()
         {
