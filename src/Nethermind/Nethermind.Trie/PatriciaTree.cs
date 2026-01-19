@@ -232,6 +232,7 @@ namespace Nethermind.Trie
                     if (childTasks is not null)
                     {
                         Task.WaitAll(childTasks.AsSpan());
+                        childTasks.Dispose();
                     }
                 }
             }

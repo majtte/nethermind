@@ -43,9 +43,6 @@ public interface IFlatDbConfig: IConfig
     [ConfigItem(Description = "Block cache size budget", DefaultValue = "1000000000")]
     long BlockCacheSizeBudget { get; set; }
 
-    [ConfigItem(Description = "Import to flat on state sync finished", DefaultValue = "false")]
-    bool ImportOnStateSyncFinished { get; set; }
-
     [ConfigItem(Description = "Generate preimage", DefaultValue = "false")]
     bool GeneratePreimage { get; set; }
 
