@@ -85,7 +85,8 @@ public class PreimageRocksdbPersistence : IPersistence
         var trieReader = new BaseTriePersistence.Reader(
             snapshot.GetColumn(FlatDbColumns.StateTopNodes),
             snapshot.GetColumn(FlatDbColumns.StateNodes),
-            snapshot.GetColumn(FlatDbColumns.StorageNodes)
+            snapshot.GetColumn(FlatDbColumns.StorageNodes),
+            snapshot.GetColumn(FlatDbColumns.FallbackNodes)
         );
 
         var currentState = ReadCurrentState(snapshot.GetColumn(FlatDbColumns.Metadata));
@@ -144,9 +145,11 @@ public class PreimageRocksdbPersistence : IPersistence
 
         var trieWriteBatch = new BaseTriePersistence.WriteBatch(
             (ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.StorageNodes),
+            (ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.FallbackNodes),
             batch.GetColumnBatch(FlatDbColumns.StateTopNodes),
             batch.GetColumnBatch(FlatDbColumns.StateNodes),
             batch.GetColumnBatch(FlatDbColumns.StorageNodes),
+            batch.GetColumnBatch(FlatDbColumns.FallbackNodes),
             flags);
 
         return new BasePersistence.WriteBatch<FakeHashWriter<BloomFlatWrapper.BloomWriter<BaseFlatPersistence.WriteBatch>>, BaseTriePersistence.WriteBatch>(

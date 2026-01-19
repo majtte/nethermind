@@ -70,13 +70,7 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
             Enabled = true,
             Layout = FlatLayout.PreimageFlat
         }, "PreimageFlat");
-        yield return new TestConfiguration(new FlatDbConfig()
-        {
-            Enabled = true,
-            Layout = FlatLayout.ShortFlat
-        }, "ShortFlat");
     }
-
 
     [SetUp]
     public void Setup()

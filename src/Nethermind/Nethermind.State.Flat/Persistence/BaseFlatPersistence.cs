@@ -23,18 +23,11 @@ public static class BaseFlatPersistence
         return buffer[..StateKeyPrefixLength];
     }
 
-    private static ReadOnlySpan<byte> EncodeStorageKeyHashed(Span<byte> buffer, in ValueHash256 addrHash, in ValueHash256 slotHash)
-    {
-        addrHash.Bytes[..StorageHashPrefixLength].CopyTo(buffer);
-        slotHash.Bytes.CopyTo(buffer[StorageHashPrefixLength..(StorageHashPrefixLength + StorageSlotKeySize)]);
-
-        return buffer[..StorageKeyLength];
-    }
-
     private static ReadOnlySpan<byte> EncodeStorageKeyHashedWithShortPrefix(Span<byte> buffer, in ValueHash256 addrHash, in ValueHash256 slotHash)
     {
         // So we store the key with only small part of the addr early then put the rest at the end.
-        // This helps with rocksdb comparator skipping 16 byte during comparison.
+        // This helps with rocksdb comparator skipping 16 byte during comparison, and with index shortening, which reduces
+        // memory usage. The downside is that during selfdestruct, it will need to double check the 16 byte postfix.
         // <4-byte-address><32-byte-slot><16-byte-address>
         addrHash.Bytes[..StoragePrefixPortion].CopyTo(buffer);
         slotHash.Bytes.CopyTo(buffer[StoragePrefixPortion..(StoragePrefixPortion + StorageSlotKeySize)]);
@@ -45,8 +38,7 @@ public static class BaseFlatPersistence
 
     public struct Reader(
         IReadOnlyKeyValueStore state,
-        IReadOnlyKeyValueStore storage,
-        bool useShortPrefix = false
+        IReadOnlyKeyValueStore storage
     ) : BasePersistence.IHashedFlatReader
     {
 
@@ -58,9 +50,7 @@ public static class BaseFlatPersistence
 
         public bool TryGetStorage(in ValueHash256 address, in ValueHash256 slot, ref SlotValue outValue)
         {
-            ReadOnlySpan<byte> storageKey = useShortPrefix
-                ? EncodeStorageKeyHashedWithShortPrefix(stackalloc byte[StorageKeyLength], address, slot)
-                : EncodeStorageKeyHashed(stackalloc byte[StorageKeyLength], address, slot);
+            ReadOnlySpan<byte> storageKey = EncodeStorageKeyHashedWithShortPrefix(stackalloc byte[StorageKeyLength], address, slot);
 
             Span<byte> buffer = stackalloc byte[40];
             int resultSize = GetStorageBuffer(storageKey, buffer);
@@ -101,60 +91,34 @@ public static class BaseFlatPersistence
         ISortedKeyValueStore storageSnap,
         IWriteOnlyKeyValueStore state,
         IWriteOnlyKeyValueStore storage,
-        WriteFlags flags,
-        bool useShortPrefix = false
+        WriteFlags flags
     ) : BasePersistence.IHashedFlatWriteBatch
     {
         public int SelfDestruct(in ValueHash256 accountPath)
         {
-            if (!useShortPrefix)
-            {
-                Span<byte> firstKey = stackalloc byte[StorageHashPrefixLength]; // Because slot 0 is a thing, its just the address prefix.
-                Span<byte> lastKey = stackalloc byte[StorageKeyLength + 1]; // The +1 is because upper bound is exclusive
-                firstKey.Fill(0x00);
-                lastKey.Fill(0xff);
-                accountPath.Bytes[..StorageHashPrefixLength].CopyTo(firstKey);
-                accountPath.Bytes[..StorageHashPrefixLength].CopyTo(lastKey);
+            Span<byte> firstKey = stackalloc byte[StoragePrefixPortion]; // Because slot 0 is a thing, its just the address prefix.
+            Span<byte> lastKey = stackalloc byte[StorageKeyLength + 1]; // The +1 is because upper bound is exclusive
+            firstKey.Fill(0x00);
+            lastKey.Fill(0xff);
+            accountPath.Bytes[..StoragePrefixPortion].CopyTo(firstKey);
+            accountPath.Bytes[..StoragePrefixPortion].CopyTo(lastKey);
 
-                int removedEntry = 0;
-                using (ISortedView storageReader = storageSnap.GetViewBetween(firstKey, lastKey))
+            int removedEntry = 0;
+            using (ISortedView storageReader = storageSnap.GetViewBetween(firstKey, lastKey))
+            {
+                IWriteOnlyKeyValueStore? storageWriter = storage;
+                while (storageReader.MoveNext())
                 {
-                    IWriteOnlyKeyValueStore? storageWriter = storage;
-                    while (storageReader.MoveNext())
+                    // If we have storage prefix portion, we need to double check that the last 16 byte match.
+                    if (Bytes.AreEqual(storageReader.CurrentKey[(StoragePrefixPortion + StorageSlotKeySize)..], accountPath.Bytes[StoragePrefixPortion..(StorageHashPrefixLength)]))
                     {
                         storageWriter.Remove(storageReader.CurrentKey);
                         removedEntry++;
                     }
                 }
-
-                return removedEntry;
             }
-            else
-            {
-                Span<byte> firstKey = stackalloc byte[StoragePrefixPortion]; // Because slot 0 is a thing, its just the address prefix.
-                Span<byte> lastKey = stackalloc byte[StorageKeyLength + 1]; // The +1 is because upper bound is exclusive
-                firstKey.Fill(0x00);
-                lastKey.Fill(0xff);
-                accountPath.Bytes[..StoragePrefixPortion].CopyTo(firstKey);
-                accountPath.Bytes[..StoragePrefixPortion].CopyTo(lastKey);
 
-                int removedEntry = 0;
-                using (ISortedView storageReader = storageSnap.GetViewBetween(firstKey, lastKey))
-                {
-                    IWriteOnlyKeyValueStore? storageWriter = storage;
-                    while (storageReader.MoveNext())
-                    {
-                        // If we have storage prefix portion, we need to double check that the last 16 byte match.
-                        if (Bytes.AreEqual(storageReader.CurrentKey[(StoragePrefixPortion + StorageSlotKeySize)..], accountPath.Bytes[StoragePrefixPortion..(StorageHashPrefixLength)]))
-                        {
-                            storageWriter.Remove(storageReader.CurrentKey);
-                            removedEntry++;
-                        }
-                    }
-                }
-
-                return removedEntry;
-            }
+            return removedEntry;
         }
 
         public void RemoveAccount(in ValueHash256 addrHash)
@@ -165,9 +129,7 @@ public static class BaseFlatPersistence
 
         public void SetStorage(in ValueHash256 addrHash, in ValueHash256 slotHash, in SlotValue? slot)
         {
-            ReadOnlySpan<byte> theKey = useShortPrefix
-                ? EncodeStorageKeyHashedWithShortPrefix(stackalloc byte[StorageKeyLength], addrHash, slotHash)
-                : EncodeStorageKeyHashed(stackalloc byte[StorageKeyLength], addrHash, slotHash);
+            ReadOnlySpan<byte> theKey = EncodeStorageKeyHashedWithShortPrefix(stackalloc byte[StorageKeyLength], addrHash, slotHash);
 
             if (slot.HasValue)
             {

@@ -66,7 +66,8 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
         var trieReader = new BaseTriePersistence.Reader(
             snapshot.GetColumn(FlatDbColumns.StateTopNodes),
             snapshot.GetColumn(FlatDbColumns.StateNodes),
-            snapshot.GetColumn(FlatDbColumns.StorageNodes)
+            snapshot.GetColumn(FlatDbColumns.StorageNodes),
+            snapshot.GetColumn(FlatDbColumns.FallbackNodes)
         );
 
         var currentState = ReadCurrentState(snapshot.GetColumn(FlatDbColumns.Metadata));
@@ -148,9 +149,11 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
 
         var trieWriteBatch = new BaseTriePersistence.WriteBatch(
             (ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.StorageNodes),
+            (ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.FallbackNodes),
             batch.GetColumnBatch(FlatDbColumns.StateTopNodes),
             batch.GetColumnBatch(FlatDbColumns.StateNodes),
             batch.GetColumnBatch(FlatDbColumns.StorageNodes),
+            batch.GetColumnBatch(FlatDbColumns.FallbackNodes),
             flags);
 
         if (_bloomFilter.IsEnabled)
@@ -274,9 +277,11 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
         IColumnsWriteBatch<FlatDbColumns> batch = _db.StartWriteBatch();
         var trieWriteBatch = new BaseTriePersistence.WriteBatch(
             (ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.StorageNodes),
+            (ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.FallbackNodes),
             batch.GetColumnBatch(FlatDbColumns.StateTopNodes),
             batch.GetColumnBatch(FlatDbColumns.StateNodes),
             batch.GetColumnBatch(FlatDbColumns.StorageNodes),
+            batch.GetColumnBatch(FlatDbColumns.FallbackNodes),
             flags);
 
         return new ConcurrentTrieWriter(trieWriteBatch, dbSnap, batch);

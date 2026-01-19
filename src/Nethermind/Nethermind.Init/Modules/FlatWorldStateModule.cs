@@ -58,11 +58,6 @@ public class FlatWorldStateModule(IFlatDbConfig flatDbConfig): Module
                     return ctx.Resolve<RocksdbPersistence>();
                 }
 
-                if (flatDbConfig.Layout == FlatLayout.ShortFlat)
-                {
-                    return ctx.Resolve<ShortenedRocksdbPersistence>();
-                }
-
                 if (flatDbConfig.Layout == FlatLayout.PreimageFlat)
                 {
                     return ctx.Resolve<PreimageRocksdbPersistence>();
@@ -75,7 +70,6 @@ public class FlatWorldStateModule(IFlatDbConfig flatDbConfig): Module
             .AddDatabase(DbNames.Preimage)
 
             .AddSingleton<RocksdbPersistence>()
-            .AddSingleton<ShortenedRocksdbPersistence>()
             .AddSingleton<RocksdbPersistence.Configuration, IFlatDbConfig>((config) => new RocksdbPersistence.Configuration()
             {
                 FlatInTrie = config.Layout == FlatLayout.FlatInTrie,
