@@ -9,6 +9,31 @@ using Nethermind.Core.Extensions;
 
 namespace Nethermind.State.Flat.Persistence;
 
+/// <summary>
+/// Common persistence logic for flat state storage. Uses 2 database columns:
+/// - State: Account data keyed by truncated address hash (20 bytes)
+/// - Storage: Contract storage keyed by split address hash + slot hash (52 bytes)
+///
+/// For storage, the address hash is split: first 4 bytes as prefix, remaining 16 bytes as suffix.
+/// This helps RocksDB's comparator skip bytes during comparison and enables index shortening,
+/// reducing memory usage. The tradeoff is that SelfDestruct must verify the 16-byte suffix.
+///
+/// <code>
+/// ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+/// │ State Key (Account)                                                                       Total: 20 bytes  │
+/// ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+/// │ Bytes 0-19                                                                                                 │
+/// │ AddressHash[0..20]                                                                                         │
+/// └─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+///
+/// ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+/// │ Storage Key                                                                               Total: 52 bytes  │
+/// ├──────────────────────────┬────────────────────────────────────────┬─────────────────────────────────────────┤
+/// │ Bytes 0-3                │ Bytes 4-35                             │ Bytes 36-51                             │
+/// │ AddressHash[0..4]        │ SlotHash[0..32]                        │ AddressHash[4..20]                      │
+/// └──────────────────────────┴────────────────────────────────────────┴─────────────────────────────────────────┘
+/// </code>
+/// </summary>
 public static class BaseFlatPersistence
 {
     private const int StateKeyPrefixLength = 20;
