@@ -402,26 +402,30 @@ public sealed class SnapshotBundle : IDisposable
         return _readOnlySnapshotBundle.TryFindStorageNodes(address, path, hash, selfDestructStateIdx, out node);
     }
 
-    public byte[]? TryLoadRlp(Hash256? address, in TreePath path, Hash256 hash, ReadFlags flags, bool isTrieWarmer)
+    public byte[]? TryLoadStateRlp(in TreePath path, Hash256 hash, ReadFlags flags, bool isTrieWarmer)
     {
         GuardDispose();
 
         long sw = Stopwatch.GetTimestamp();
-        byte[]? value = _readOnlySnapshotBundle.TryLoadRlp(address, path, hash, flags);
-        if (address is null)
-        {
-            if (isTrieWarmer)
-                _loadStateRlpTrieWarmer.Observe(Stopwatch.GetTimestamp() - sw);
-            else
-                _loadStateRlp.Observe(Stopwatch.GetTimestamp() - sw);
-        }
+        byte[]? value = _readOnlySnapshotBundle.TryLoadStateRlp(path, hash, flags);
+        if (isTrieWarmer)
+            _loadStateRlpTrieWarmer.Observe(Stopwatch.GetTimestamp() - sw);
         else
-        {
-            if (isTrieWarmer)
-                _loadStorageRlpTrieWarmer.Observe(Stopwatch.GetTimestamp() - sw);
-            else
-                _loadStorageRlp.Observe(Stopwatch.GetTimestamp() - sw);
-        }
+            _loadStateRlp.Observe(Stopwatch.GetTimestamp() - sw);
+
+        return value;
+    }
+
+    public byte[]? TryLoadStorageRlp(Hash256 address, in TreePath path, Hash256 hash, ReadFlags flags, bool isTrieWarmer)
+    {
+        GuardDispose();
+
+        long sw = Stopwatch.GetTimestamp();
+        byte[]? value = _readOnlySnapshotBundle.TryLoadStorageRlp(address, path, hash, flags);
+        if (isTrieWarmer)
+            _loadStorageRlpTrieWarmer.Observe(Stopwatch.GetTimestamp() - sw);
+        else
+            _loadStorageRlp.Observe(Stopwatch.GetTimestamp() - sw);
 
         return value;
     }

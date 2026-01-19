@@ -156,7 +156,14 @@ public class Importer(
 
             long sw = Stopwatch.GetTimestamp();
             TrieNode node = entry.node;
-            writeBatch.SetTrieNodes(entry.address, entry.path, node);
+            if (entry.address is null)
+            {
+                writeBatch.SetStateTrieNode(entry.path, node);
+            }
+            else
+            {
+                writeBatch.SetStorageTrieNode(entry.address, entry.path, node);
+            }
             if (node.IsLeaf)
             {
                 long isw = Stopwatch.GetTimestamp();
@@ -243,7 +250,14 @@ public class Importer(
 
             long sw = Stopwatch.GetTimestamp();
             TrieNode node = entry.node;
-            writeBatch.SetTrieNodes(entry.address, entry.path, node);
+            if (entry.address is null)
+            {
+                writeBatch.SetStateTrieNode(entry.path, node);
+            }
+            else
+            {
+                writeBatch.SetStorageTrieNode(entry.address, entry.path, node);
+            }
             _importerTime.WithLabels("flush_set").Observe(Stopwatch.GetTimestamp() - sw);
 
             if (node.IsLeaf)

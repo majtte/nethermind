@@ -460,31 +460,31 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
         using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
         {
             // State trie nodes (address=null)
-            writer.SetTrieNodes(null, in stateShortPath, new TrieNode(NodeType.Leaf, stateShortRlp));
-            writer.SetTrieNodes(null, in stateMediumPath, new TrieNode(NodeType.Leaf, stateMediumRlp));
-            writer.SetTrieNodes(null, in stateLongPath, new TrieNode(NodeType.Leaf, stateLongRlp));
+            writer.SetStateTrieNode(in stateShortPath, new TrieNode(NodeType.Leaf, stateShortRlp));
+            writer.SetStateTrieNode(in stateMediumPath, new TrieNode(NodeType.Leaf, stateMediumRlp));
+            writer.SetStateTrieNode(in stateLongPath, new TrieNode(NodeType.Leaf, stateLongRlp));
 
             // Storage trie nodes (with account address)
-            writer.SetTrieNodes(account1, in storageShortPath, new TrieNode(NodeType.Leaf, storage1ShortRlp));
-            writer.SetTrieNodes(account1, in storageLongPath, new TrieNode(NodeType.Leaf, storage1LongRlp));
-            writer.SetTrieNodes(account2, in storageShortPath, new TrieNode(NodeType.Leaf, storage2ShortRlp));
+            writer.SetStorageTrieNode(account1, in storageShortPath, new TrieNode(NodeType.Leaf, storage1ShortRlp));
+            writer.SetStorageTrieNode(account1, in storageLongPath, new TrieNode(NodeType.Leaf, storage1LongRlp));
+            writer.SetStorageTrieNode(account2, in storageShortPath, new TrieNode(NodeType.Leaf, storage2ShortRlp));
         }
 
         // Verify all nodes
         using (var reader = _persistence.CreateReader())
         {
             // State trie nodes
-            Assert.That(reader.TryLoadRlp(null, in stateShortPath, ReadFlags.None), Is.EqualTo(stateShortRlp));
-            Assert.That(reader.TryLoadRlp(null, in stateMediumPath, ReadFlags.None), Is.EqualTo(stateMediumRlp));
-            Assert.That(reader.TryLoadRlp(null, in stateLongPath, ReadFlags.None), Is.EqualTo(stateLongRlp));
+            Assert.That(reader.TryLoadStateRlp(in stateShortPath, ReadFlags.None), Is.EqualTo(stateShortRlp));
+            Assert.That(reader.TryLoadStateRlp(in stateMediumPath, ReadFlags.None), Is.EqualTo(stateMediumRlp));
+            Assert.That(reader.TryLoadStateRlp(in stateLongPath, ReadFlags.None), Is.EqualTo(stateLongRlp));
 
             // Storage trie nodes - verify account isolation
-            Assert.That(reader.TryLoadRlp(account1, in storageShortPath, ReadFlags.None), Is.EqualTo(storage1ShortRlp));
-            Assert.That(reader.TryLoadRlp(account1, in storageLongPath, ReadFlags.None), Is.EqualTo(storage1LongRlp));
-            Assert.That(reader.TryLoadRlp(account2, in storageShortPath, ReadFlags.None), Is.EqualTo(storage2ShortRlp));
+            Assert.That(reader.TryLoadStorageRlp(account1, in storageShortPath, ReadFlags.None), Is.EqualTo(storage1ShortRlp));
+            Assert.That(reader.TryLoadStorageRlp(account1, in storageLongPath, ReadFlags.None), Is.EqualTo(storage1LongRlp));
+            Assert.That(reader.TryLoadStorageRlp(account2, in storageShortPath, ReadFlags.None), Is.EqualTo(storage2ShortRlp));
 
             // State and storage at same path are separate
-            Assert.That(reader.TryLoadRlp(null, in storageShortPath, ReadFlags.None), Is.Null);
+            Assert.That(reader.TryLoadStateRlp(in storageShortPath, ReadFlags.None), Is.Null);
         }
     }
 
@@ -499,25 +499,25 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
 
         using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
         {
-            writer.SetTrieNodes(null, in path, new TrieNode(NodeType.Leaf, rlpData1));
+            writer.SetStateTrieNode(in path, new TrieNode(NodeType.Leaf, rlpData1));
         }
         using var reader1 = _persistence.CreateReader();
 
         using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
         {
-            writer.SetTrieNodes(null, in path, new TrieNode(NodeType.Leaf, rlpData2));
+            writer.SetStateTrieNode(in path, new TrieNode(NodeType.Leaf, rlpData2));
         }
         using var reader2 = _persistence.CreateReader();
 
         using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
         {
-            writer.SetTrieNodes(null, in path, new TrieNode(NodeType.Leaf, rlpData3));
+            writer.SetStateTrieNode(in path, new TrieNode(NodeType.Leaf, rlpData3));
         }
         using var reader3 = _persistence.CreateReader();
 
-        Assert.That(reader1.TryLoadRlp(null, in path, ReadFlags.None), Is.EqualTo(rlpData1));
-        Assert.That(reader2.TryLoadRlp(null, in path, ReadFlags.None), Is.EqualTo(rlpData2));
-        Assert.That(reader3.TryLoadRlp(null, in path, ReadFlags.None), Is.EqualTo(rlpData3));
+        Assert.That(reader1.TryLoadStateRlp(in path, ReadFlags.None), Is.EqualTo(rlpData1));
+        Assert.That(reader2.TryLoadStateRlp(in path, ReadFlags.None), Is.EqualTo(rlpData2));
+        Assert.That(reader3.TryLoadStateRlp(in path, ReadFlags.None), Is.EqualTo(rlpData3));
     }
 
     [Test]
@@ -547,22 +547,22 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
 
         using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
         {
-            writer.SetTrieNodes(null, in statePath5, new TrieNode(NodeType.Leaf, rlp5));
-            writer.SetTrieNodes(null, in statePath6, new TrieNode(NodeType.Leaf, rlp6));
-            writer.SetTrieNodes(null, in statePath15, new TrieNode(NodeType.Leaf, rlp15));
-            writer.SetTrieNodes(null, in statePath16, new TrieNode(NodeType.Leaf, rlp16));
-            writer.SetTrieNodes(account, in storagePath15, new TrieNode(NodeType.Leaf, storageRlp15));
-            writer.SetTrieNodes(account, in storagePath16, new TrieNode(NodeType.Leaf, storageRlp16));
+            writer.SetStateTrieNode(in statePath5, new TrieNode(NodeType.Leaf, rlp5));
+            writer.SetStateTrieNode(in statePath6, new TrieNode(NodeType.Leaf, rlp6));
+            writer.SetStateTrieNode(in statePath15, new TrieNode(NodeType.Leaf, rlp15));
+            writer.SetStateTrieNode(in statePath16, new TrieNode(NodeType.Leaf, rlp16));
+            writer.SetStorageTrieNode(account, in storagePath15, new TrieNode(NodeType.Leaf, storageRlp15));
+            writer.SetStorageTrieNode(account, in storagePath16, new TrieNode(NodeType.Leaf, storageRlp16));
         }
 
         using (var reader = _persistence.CreateReader())
         {
-            Assert.That(reader.TryLoadRlp(null, in statePath5, ReadFlags.None), Is.EqualTo(rlp5));
-            Assert.That(reader.TryLoadRlp(null, in statePath6, ReadFlags.None), Is.EqualTo(rlp6));
-            Assert.That(reader.TryLoadRlp(null, in statePath15, ReadFlags.None), Is.EqualTo(rlp15));
-            Assert.That(reader.TryLoadRlp(null, in statePath16, ReadFlags.None), Is.EqualTo(rlp16));
-            Assert.That(reader.TryLoadRlp(account, in storagePath15, ReadFlags.None), Is.EqualTo(storageRlp15));
-            Assert.That(reader.TryLoadRlp(account, in storagePath16, ReadFlags.None), Is.EqualTo(storageRlp16));
+            Assert.That(reader.TryLoadStateRlp(in statePath5, ReadFlags.None), Is.EqualTo(rlp5));
+            Assert.That(reader.TryLoadStateRlp(in statePath6, ReadFlags.None), Is.EqualTo(rlp6));
+            Assert.That(reader.TryLoadStateRlp(in statePath15, ReadFlags.None), Is.EqualTo(rlp15));
+            Assert.That(reader.TryLoadStateRlp(in statePath16, ReadFlags.None), Is.EqualTo(rlp16));
+            Assert.That(reader.TryLoadStorageRlp(account, in storagePath15, ReadFlags.None), Is.EqualTo(storageRlp15));
+            Assert.That(reader.TryLoadStorageRlp(account, in storagePath16, ReadFlags.None), Is.EqualTo(storageRlp16));
         }
     }
 
@@ -591,25 +591,25 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
         using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
         {
             // Account 1 storage trie nodes
-            writer.SetTrieNodes(account1Hash, in shortPath, new TrieNode(NodeType.Leaf, rlpShort));
-            writer.SetTrieNodes(account1Hash, in mediumPath, new TrieNode(NodeType.Leaf, rlpMedium));
-            writer.SetTrieNodes(account1Hash, in longPath, new TrieNode(NodeType.Leaf, rlpLong));
+            writer.SetStorageTrieNode(account1Hash, in shortPath, new TrieNode(NodeType.Leaf, rlpShort));
+            writer.SetStorageTrieNode(account1Hash, in mediumPath, new TrieNode(NodeType.Leaf, rlpMedium));
+            writer.SetStorageTrieNode(account1Hash, in longPath, new TrieNode(NodeType.Leaf, rlpLong));
 
             // Account 2 storage trie nodes (same paths, different account)
-            writer.SetTrieNodes(account2Hash, in shortPath, new TrieNode(NodeType.Leaf, rlpShort));
-            writer.SetTrieNodes(account2Hash, in mediumPath, new TrieNode(NodeType.Leaf, rlpMedium));
-            writer.SetTrieNodes(account2Hash, in longPath, new TrieNode(NodeType.Leaf, rlpLong));
+            writer.SetStorageTrieNode(account2Hash, in shortPath, new TrieNode(NodeType.Leaf, rlpShort));
+            writer.SetStorageTrieNode(account2Hash, in mediumPath, new TrieNode(NodeType.Leaf, rlpMedium));
+            writer.SetStorageTrieNode(account2Hash, in longPath, new TrieNode(NodeType.Leaf, rlpLong));
         }
 
         // Verify all nodes exist
         using (var reader = _persistence.CreateReader())
         {
-            Assert.That(reader.TryLoadRlp(account1Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlpShort));
-            Assert.That(reader.TryLoadRlp(account1Hash, in mediumPath, ReadFlags.None), Is.EqualTo(rlpMedium));
-            Assert.That(reader.TryLoadRlp(account1Hash, in longPath, ReadFlags.None), Is.EqualTo(rlpLong));
-            Assert.That(reader.TryLoadRlp(account2Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlpShort));
-            Assert.That(reader.TryLoadRlp(account2Hash, in mediumPath, ReadFlags.None), Is.EqualTo(rlpMedium));
-            Assert.That(reader.TryLoadRlp(account2Hash, in longPath, ReadFlags.None), Is.EqualTo(rlpLong));
+            Assert.That(reader.TryLoadStorageRlp(account1Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlpShort));
+            Assert.That(reader.TryLoadStorageRlp(account1Hash, in mediumPath, ReadFlags.None), Is.EqualTo(rlpMedium));
+            Assert.That(reader.TryLoadStorageRlp(account1Hash, in longPath, ReadFlags.None), Is.EqualTo(rlpLong));
+            Assert.That(reader.TryLoadStorageRlp(account2Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlpShort));
+            Assert.That(reader.TryLoadStorageRlp(account2Hash, in mediumPath, ReadFlags.None), Is.EqualTo(rlpMedium));
+            Assert.That(reader.TryLoadStorageRlp(account2Hash, in longPath, ReadFlags.None), Is.EqualTo(rlpLong));
         }
 
         // SelfDestruct account1 (uses Address, internally converts to hash)
@@ -622,14 +622,14 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
         using (var reader = _persistence.CreateReader())
         {
             // Account 1 nodes should be gone
-            Assert.That(reader.TryLoadRlp(account1Hash, in shortPath, ReadFlags.None), Is.Null);
-            Assert.That(reader.TryLoadRlp(account1Hash, in mediumPath, ReadFlags.None), Is.Null);
-            Assert.That(reader.TryLoadRlp(account1Hash, in longPath, ReadFlags.None), Is.Null);
+            Assert.That(reader.TryLoadStorageRlp(account1Hash, in shortPath, ReadFlags.None), Is.Null);
+            Assert.That(reader.TryLoadStorageRlp(account1Hash, in mediumPath, ReadFlags.None), Is.Null);
+            Assert.That(reader.TryLoadStorageRlp(account1Hash, in longPath, ReadFlags.None), Is.Null);
 
             // Account 2 nodes should still exist
-            Assert.That(reader.TryLoadRlp(account2Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlpShort));
-            Assert.That(reader.TryLoadRlp(account2Hash, in mediumPath, ReadFlags.None), Is.EqualTo(rlpMedium));
-            Assert.That(reader.TryLoadRlp(account2Hash, in longPath, ReadFlags.None), Is.EqualTo(rlpLong));
+            Assert.That(reader.TryLoadStorageRlp(account2Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlpShort));
+            Assert.That(reader.TryLoadStorageRlp(account2Hash, in mediumPath, ReadFlags.None), Is.EqualTo(rlpMedium));
+            Assert.That(reader.TryLoadStorageRlp(account2Hash, in longPath, ReadFlags.None), Is.EqualTo(rlpLong));
         }
     }
 
@@ -664,19 +664,19 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
         // Write trie nodes using the hashes directly
         using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
         {
-            writer.SetTrieNodes(account1Hash, in shortPath, new TrieNode(NodeType.Leaf, rlp1));
-            writer.SetTrieNodes(account1Hash, in longPath, new TrieNode(NodeType.Leaf, rlp1));
-            writer.SetTrieNodes(account2Hash, in shortPath, new TrieNode(NodeType.Leaf, rlp2));
-            writer.SetTrieNodes(account2Hash, in longPath, new TrieNode(NodeType.Leaf, rlp2));
+            writer.SetStorageTrieNode(account1Hash, in shortPath, new TrieNode(NodeType.Leaf, rlp1));
+            writer.SetStorageTrieNode(account1Hash, in longPath, new TrieNode(NodeType.Leaf, rlp1));
+            writer.SetStorageTrieNode(account2Hash, in shortPath, new TrieNode(NodeType.Leaf, rlp2));
+            writer.SetStorageTrieNode(account2Hash, in longPath, new TrieNode(NodeType.Leaf, rlp2));
         }
 
         // Verify all nodes exist before SelfDestruct
         using (var reader = _persistence.CreateReader())
         {
-            Assert.That(reader.TryLoadRlp(account1Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlp1));
-            Assert.That(reader.TryLoadRlp(account1Hash, in longPath, ReadFlags.None), Is.EqualTo(rlp1));
-            Assert.That(reader.TryLoadRlp(account2Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlp2));
-            Assert.That(reader.TryLoadRlp(account2Hash, in longPath, ReadFlags.None), Is.EqualTo(rlp2));
+            Assert.That(reader.TryLoadStorageRlp(account1Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlp1));
+            Assert.That(reader.TryLoadStorageRlp(account1Hash, in longPath, ReadFlags.None), Is.EqualTo(rlp1));
+            Assert.That(reader.TryLoadStorageRlp(account2Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlp2));
+            Assert.That(reader.TryLoadStorageRlp(account2Hash, in longPath, ReadFlags.None), Is.EqualTo(rlp2));
         }
 
         // SelfDestruct account1 using an address that hashes to account1Hash
@@ -689,8 +689,8 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
         // Write and then delete using the real address flow
         using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
         {
-            writer.SetTrieNodes(address1Hash, in shortPath, new TrieNode(NodeType.Leaf, rlp1));
-            writer.SetTrieNodes(address1Hash, in longPath, new TrieNode(NodeType.Leaf, rlp1));
+            writer.SetStorageTrieNode(address1Hash, in shortPath, new TrieNode(NodeType.Leaf, rlp1));
+            writer.SetStorageTrieNode(address1Hash, in longPath, new TrieNode(NodeType.Leaf, rlp1));
         }
 
         using (var writer = _persistence.CreateWriteBatch(StateId.PreGenesis, StateId.PreGenesis, WriteFlags.None))
@@ -701,12 +701,12 @@ public class PersistenceScenario(PersistenceScenario.TestConfiguration configura
         // Verify address1's trie nodes are deleted
         using (var reader = _persistence.CreateReader())
         {
-            Assert.That(reader.TryLoadRlp(address1Hash, in shortPath, ReadFlags.None), Is.Null);
-            Assert.That(reader.TryLoadRlp(address1Hash, in longPath, ReadFlags.None), Is.Null);
+            Assert.That(reader.TryLoadStorageRlp(address1Hash, in shortPath, ReadFlags.None), Is.Null);
+            Assert.That(reader.TryLoadStorageRlp(address1Hash, in longPath, ReadFlags.None), Is.Null);
 
             // The manually created hashes should still exist (they weren't self-destructed)
-            Assert.That(reader.TryLoadRlp(account1Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlp1));
-            Assert.That(reader.TryLoadRlp(account2Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlp2));
+            Assert.That(reader.TryLoadStorageRlp(account1Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlp1));
+            Assert.That(reader.TryLoadStorageRlp(account2Hash, in shortPath, ReadFlags.None), Is.EqualTo(rlp2));
         }
     }
 }

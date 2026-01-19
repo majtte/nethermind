@@ -194,33 +194,31 @@ public static class BaseTriePersistence
             }
         }
 
-        public void SetTrieNodes(Hash256? address, TreePath path, TrieNode tn)
+        public void SetStateTrieNode(TreePath path, TrieNode tn)
         {
-            if (address is null)
+            if (path.Length <= StateNodesTopThreshold)
             {
-                if (path.Length <= StateNodesTopThreshold)
-                {
-                    stateTopNodes.PutSpan(EncodeStateTopNodeKey(stackalloc byte[StateNodesTopKeyLength], path), tn.FullRlp.Span, flags);
-                }
-                else if (path.Length <= ShortenedStatePathThreshold)
-                {
-                    stateNodes.PutSpan(EncodeShortenedStateNodeKey(stackalloc byte[ShortenedStatePathLength], path), tn.FullRlp.Span, flags);
-                }
-                else
-                {
-                    fallbackNodes.PutSpan(EncodeFullStateNodeKey(stackalloc byte[FullStateNodesKeyLength], in path), tn.FullRlp.Span, flags);
-                }
+                stateTopNodes.PutSpan(EncodeStateTopNodeKey(stackalloc byte[StateNodesTopKeyLength], path), tn.FullRlp.Span, flags);
+            }
+            else if (path.Length <= ShortenedStatePathThreshold)
+            {
+                stateNodes.PutSpan(EncodeShortenedStateNodeKey(stackalloc byte[ShortenedStatePathLength], path), tn.FullRlp.Span, flags);
             }
             else
             {
-                if (path.Length <= ShortenedStoragePathThreshold)
-                {
-                    storageNodes.PutSpan(EncodeShortenedStorageNodeKey(stackalloc byte[ShortenedStorageNodesKeyLength], address, path), tn.FullRlp.Span, flags);
-                }
-                else
-                {
-                    fallbackNodes.PutSpan(EncodeFullStorageNodeKey(stackalloc byte[FullStorageNodesKeyLength], address, in path), tn.FullRlp.Span, flags);
-                }
+                fallbackNodes.PutSpan(EncodeFullStateNodeKey(stackalloc byte[FullStateNodesKeyLength], in path), tn.FullRlp.Span, flags);
+            }
+        }
+
+        public void SetStorageTrieNode(Hash256 address, TreePath path, TrieNode tn)
+        {
+            if (path.Length <= ShortenedStoragePathThreshold)
+            {
+                storageNodes.PutSpan(EncodeShortenedStorageNodeKey(stackalloc byte[ShortenedStorageNodesKeyLength], address, path), tn.FullRlp.Span, flags);
+            }
+            else
+            {
+                fallbackNodes.PutSpan(EncodeFullStorageNodeKey(stackalloc byte[FullStorageNodesKeyLength], address, in path), tn.FullRlp.Span, flags);
             }
         }
     }
@@ -233,33 +231,31 @@ public static class BaseTriePersistence
         IReadOnlyKeyValueStore fallbackNodes
     ) : BasePersistence.ITrieReader
     {
-        public byte[]? TryLoadRlp(Hash256? address, in TreePath path, ReadFlags flags)
+        public byte[]? TryLoadStateRlp(in TreePath path, ReadFlags flags)
         {
-            if (address is null)
+            if (path.Length <= StateNodesTopThreshold)
             {
-                if (path.Length <= StateNodesTopThreshold)
-                {
-                    return stateTopNodes.Get(EncodeStateTopNodeKey(stackalloc byte[StateNodesTopKeyLength], in path));
-                }
-                else if (path.Length <= ShortenedStatePathThreshold)
-                {
-                    return stateNodes.Get(EncodeShortenedStateNodeKey(stackalloc byte[ShortenedStatePathLength], in path));
-                }
-                else
-                {
-                    return fallbackNodes.Get(EncodeFullStateNodeKey(stackalloc byte[FullStateNodesKeyLength], in path));
-                }
+                return stateTopNodes.Get(EncodeStateTopNodeKey(stackalloc byte[StateNodesTopKeyLength], in path));
+            }
+            else if (path.Length <= ShortenedStatePathThreshold)
+            {
+                return stateNodes.Get(EncodeShortenedStateNodeKey(stackalloc byte[ShortenedStatePathLength], in path));
             }
             else
             {
-                if (path.Length <= ShortenedStoragePathThreshold)
-                {
-                    return storageNodes.Get(EncodeShortenedStorageNodeKey(stackalloc byte[ShortenedStorageNodesKeyLength], address, in path));
-                }
-                else
-                {
-                    return fallbackNodes.Get(EncodeFullStorageNodeKey(stackalloc byte[FullStorageNodesKeyLength], address, in path));
-                }
+                return fallbackNodes.Get(EncodeFullStateNodeKey(stackalloc byte[FullStateNodesKeyLength], in path));
+            }
+        }
+
+        public byte[]? TryLoadStorageRlp(Hash256 address, in TreePath path, ReadFlags flags)
+        {
+            if (path.Length <= ShortenedStoragePathThreshold)
+            {
+                return storageNodes.Get(EncodeShortenedStorageNodeKey(stackalloc byte[ShortenedStorageNodesKeyLength], address, in path));
+            }
+            else
+            {
+                return fallbackNodes.Get(EncodeFullStorageNodeKey(stackalloc byte[FullStorageNodesKeyLength], address, in path));
             }
         }
     }

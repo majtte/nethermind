@@ -31,7 +31,7 @@ internal class StateTrieStoreAdapter(
         return node;
     }
 
-    public override byte[]? TryLoadRlp(in TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None) => bundle.TryLoadRlp(null, path, hash, flags, isTrieWarmer);
+    public override byte[]? TryLoadRlp(in TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None) => bundle.TryLoadStateRlp(path, hash, flags, isTrieWarmer);
 
     public override ICommitter BeginCommit(TrieNode? root, WriteFlags writeFlags = WriteFlags.None) => new Committer(bundle, concurrencyQuota);
 
@@ -77,7 +77,7 @@ internal class StorageTrieStoreAdapter(
 
     public override byte[]? TryLoadRlp(in TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None)
     {
-        return bundle.TryLoadRlp(addressHash, in path, hash, flags, isTrieWarmer);
+        return bundle.TryLoadStorageRlp(addressHash, in path, hash, flags, isTrieWarmer);
     }
 
     public override ICommitter BeginCommit(TrieNode? root, WriteFlags writeFlags = WriteFlags.None)

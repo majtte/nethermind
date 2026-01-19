@@ -21,7 +21,8 @@ public interface IPersistence
         Account? GetAccount(Address address);
         bool TryGetSlot(Address address, in UInt256 slot, ref SlotValue outValue);
         StateId CurrentState { get; }
-        byte[]? TryLoadRlp(Hash256? address, in TreePath path, ReadFlags flags);
+        byte[]? TryLoadStateRlp(in TreePath path, ReadFlags flags);
+        byte[]? TryLoadStorageRlp(Hash256 address, in TreePath path, ReadFlags flags);
 
         byte[]? GetAccountRaw(Hash256 addrHash);
         byte[]? GetStorageRaw(Hash256 addrHash, Hash256 slotHash);
@@ -32,7 +33,8 @@ public interface IPersistence
         int SelfDestruct(Address addr);
         void SetAccount(Address addr, Account? account);
         void SetStorage(Address addr, in UInt256 slot, in SlotValue? value);
-        void SetTrieNodes(Hash256? address, in TreePath path, TrieNode tnValue);
+        void SetStateTrieNode(in TreePath path, TrieNode tnValue);
+        void SetStorageTrieNode(Hash256 address, in TreePath path, TrieNode tnValue);
 
         void SetStorageRaw(Hash256 addrHash, Hash256 slotHash, in SlotValue? value);
         void SetAccountRaw(Hash256 addrHash, Account account);
@@ -50,6 +52,7 @@ public interface IPersistenceWithConcurrentTrie
 
     public interface IWriteBatch: IDisposable
     {
-        void SetTrieNodes(Hash256? address, in TreePath path, TrieNode tnValue);
+        void SetStateTrieNode(in TreePath path, TrieNode tnValue);
+        void SetStorageTrieNode(Hash256 address, in TreePath path, TrieNode tnValue);
     }
 }

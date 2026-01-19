@@ -295,9 +295,14 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
             batch.Dispose();
         }
 
-        public void SetTrieNodes(Hash256? address, in TreePath path, TrieNode tnValue)
+        public void SetStateTrieNode(in TreePath path, TrieNode tnValue)
         {
-            trieWriteBatch.SetTrieNodes(address, path, tnValue);
+            trieWriteBatch.SetStateTrieNode(path, tnValue);
+        }
+
+        public void SetStorageTrieNode(Hash256 address, in TreePath path, TrieNode tnValue)
+        {
+            trieWriteBatch.SetStorageTrieNode(address, path, tnValue);
         }
     }
 }

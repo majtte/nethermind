@@ -165,22 +165,26 @@ public sealed class ReadOnlySnapshotBundle(
         return false;
     }
 
-    public byte[]? TryLoadRlp(Hash256? address, in TreePath path, Hash256 hash, ReadFlags flags)
+    public byte[]? TryLoadStateRlp(in TreePath path, Hash256 hash, ReadFlags flags)
     {
         GuardDispose();
 
         Nethermind.Trie.Pruning.Metrics.LoadedFromDbNodesCount++;
         long sw = Stopwatch.GetTimestamp();
-        var value =  persistenceReader.TryLoadRlp(address, path, flags);
+        var value = persistenceReader.TryLoadStateRlp(path, flags);
+        _readStateRlp.Observe(Stopwatch.GetTimestamp() - sw);
 
-        if (address is null)
-        {
-            _readStateRlp.Observe(Stopwatch.GetTimestamp() - sw);
-        }
-        else
-        {
-            _readStorageRlp.Observe(Stopwatch.GetTimestamp() - sw);
-        }
+        return value;
+    }
+
+    public byte[]? TryLoadStorageRlp(Hash256 address, in TreePath path, Hash256 hash, ReadFlags flags)
+    {
+        GuardDispose();
+
+        Nethermind.Trie.Pruning.Metrics.LoadedFromDbNodesCount++;
+        long sw = Stopwatch.GetTimestamp();
+        var value = persistenceReader.TryLoadStorageRlp(address, path, flags);
+        _readStorageRlp.Observe(Stopwatch.GetTimestamp() - sw);
 
         return value;
     }

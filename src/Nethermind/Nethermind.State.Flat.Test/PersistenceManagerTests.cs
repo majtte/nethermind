@@ -327,7 +327,7 @@ public class PersistenceManagerTests
         writeBatch.Received().SetAccount(TestItem.AddressB, Arg.Any<Account?>());
         writeBatch.Received().SetStorage(TestItem.AddressA, (UInt256)1, Arg.Any<SlotValue?>());
         writeBatch.Received().SetStorage(TestItem.AddressA, (UInt256)2, Arg.Any<SlotValue?>());
-        writeBatch.Received().SetTrieNodes(null, Arg.Any<TreePath>(), Arg.Any<TrieNode>());
+        writeBatch.Received().SetStateTrieNode(Arg.Any<TreePath>(), Arg.Any<TrieNode>());
         Assert.That(node.IsPersisted, Is.True);
     }
 

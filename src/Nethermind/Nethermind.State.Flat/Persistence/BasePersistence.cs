@@ -64,13 +64,15 @@ public static class BasePersistence
 
     public interface ITrieReader
     {
-        public byte[]? TryLoadRlp(Hash256? address, in TreePath path, ReadFlags flags);
+        public byte[]? TryLoadStateRlp(in TreePath path, ReadFlags flags);
+        public byte[]? TryLoadStorageRlp(Hash256 address, in TreePath path, ReadFlags flags);
     }
 
     public interface ITrieWriteBatch
     {
         public void SelfDestruct(in ValueHash256 address);
-        public void SetTrieNodes(Hash256? address, TreePath path, TrieNode tnValue);
+        public void SetStateTrieNode(TreePath path, TrieNode tnValue);
+        public void SetStorageTrieNode(Hash256 address, TreePath path, TrieNode tnValue);
     }
 
     public readonly struct ToHashedWriteBatch<TWriteBatch>(
@@ -197,9 +199,14 @@ public static class BasePersistence
             return _flatReader.TryGetSlot(address, in slot, ref outValue);
         }
 
-        public byte[]? TryLoadRlp(Hash256? address, in TreePath path, ReadFlags flags)
+        public byte[]? TryLoadStateRlp(in TreePath path, ReadFlags flags)
         {
-            return _trieReader.TryLoadRlp(address, path, flags);
+            return _trieReader.TryLoadStateRlp(path, flags);
+        }
+
+        public byte[]? TryLoadStorageRlp(Hash256 address, in TreePath path, ReadFlags flags)
+        {
+            return _trieReader.TryLoadStorageRlp(address, path, flags);
         }
 
         public byte[]? GetAccountRaw(Hash256 addrHash)
@@ -248,9 +255,14 @@ public static class BasePersistence
             _flatWriter.SetStorage(addr, slot, value);
         }
 
-        public void SetTrieNodes(Hash256? address, in TreePath path, TrieNode tnValue)
+        public void SetStateTrieNode(in TreePath path, TrieNode tnValue)
         {
-            _trieWriteBatch.SetTrieNodes(address, path, tnValue);
+            _trieWriteBatch.SetStateTrieNode(path, tnValue);
+        }
+
+        public void SetStorageTrieNode(Hash256 address, in TreePath path, TrieNode tnValue)
+        {
+            _trieWriteBatch.SetStorageTrieNode(address, path, tnValue);
         }
 
         public void SetStorageRaw(Hash256 addrHash, Hash256 slotHash, in SlotValue? value)

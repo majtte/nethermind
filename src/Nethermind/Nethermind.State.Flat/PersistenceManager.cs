@@ -362,7 +362,7 @@ public class PersistenceManager: IAsyncDisposable
 
                 stateNodesSize += node.FullRlp.Length;
                 // Note: Even if the node already marked as persisted, we still re-persist it
-                batch.SetTrieNodes(null, path, node);
+                batch.SetStateTrieNode(path, node);
 
                 node.IsPersisted = true;
             }
@@ -394,7 +394,7 @@ public class PersistenceManager: IAsyncDisposable
 
                 storageNodesSize += node.FullRlp.Length;
                 // Note: Even if the node already marked as persisted, we still re-persist it
-                batch.SetTrieNodes(address, path, node);
+                batch.SetStorageTrieNode(address, path, node);
 
                 node.IsPersisted = true;
             }

@@ -26,7 +26,12 @@ public class NoopPersistenceReader: IPersistence.IPersistenceReader
 
     public StateId CurrentState => new StateId(0, Keccak.EmptyTreeHash);
 
-    public byte[]? TryLoadRlp(Hash256? address, in TreePath path, ReadFlags flags)
+    public byte[]? TryLoadStateRlp(in TreePath path, ReadFlags flags)
+    {
+        return null;
+    }
+
+    public byte[]? TryLoadStorageRlp(Hash256 address, in TreePath path, ReadFlags flags)
     {
         return null;
     }
