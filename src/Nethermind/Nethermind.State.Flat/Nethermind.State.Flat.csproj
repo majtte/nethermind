@@ -14,5 +14,8 @@
     <ProjectReference Include="..\Nethermind.Trie\Nethermind.Trie.csproj" />
     <ProjectReference Include="..\Nethermind.Evm\Nethermind.Evm.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.IO.Hashing" />
+  </ItemGroup>
 
 </Project>

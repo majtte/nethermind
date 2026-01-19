@@ -1106,16 +1106,11 @@
       "nethermind.state": {
         "type": "Project",
         "dependencies": {
-          "DotNext.IO": "(, )",
-          "DotNext.Unsafe": "(, )",
-          "LightningDB": "(, )",
           "Nethermind.Core": "[1.37.0-unstable, )",
           "Nethermind.Db": "[1.37.0-unstable, )",
           "Nethermind.Evm": "[1.37.0-unstable, )",
           "Nethermind.Serialization.Rlp": "[1.37.0-unstable, )",
-          "Nethermind.Trie": "[1.37.0-unstable, )",
-          "System.IO.Hashing": "(, )",
-          "ZstdSharp.Port": "[0.8.6, )"
+          "Nethermind.Trie": "[1.37.0-unstable, )"
         }
       },
       "nethermind.state.flat": {
@@ -1126,7 +1121,8 @@
           "Nethermind.Evm": "[1.37.0-unstable, )",
           "Nethermind.Serialization.Rlp": "[1.37.0-unstable, )",
           "Nethermind.State": "[1.37.0-unstable, )",
-          "Nethermind.Trie": "[1.37.0-unstable, )"
+          "Nethermind.Trie": "[1.37.0-unstable, )",
+          "System.IO.Hashing": "[10.0.2, )"
         }
       },
       "nethermind.synchronization": {
@@ -1586,6 +1582,12 @@
         "dependencies": {
           "System.Security.Cryptography.ProtectedData": "10.0.1"
         }
+      },
+      "System.IO.Hashing": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.2, )",
+        "resolved": "10.0.2",
+        "contentHash": "AKJknIFi9O3+rGExxTry188JPvUoZAPcCtS2qdqyFhIzsxQ1Ap94BeGDG0VzVEHakhmRxmJtVih6TsHoghIt/g=="
       },
       "System.Security.Cryptography.ProtectedData": {
         "type": "CentralTransitive",
