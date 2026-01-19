@@ -74,16 +74,6 @@ public class FlatWorldStateModule(IFlatDbConfig flatDbConfig): Module
             {
                 FlatInTrie = config.Layout == FlatLayout.FlatInTrie,
             })
-            .AddKeyedSingleton<SegmentedBloom>(DbNames.Flat, (ctx) =>
-            {
-                IInitConfig initConfig = ctx.Resolve<IInitConfig>();
-                IFlatDbConfig flatDbConfig = ctx.Resolve<IFlatDbConfig>();
-                var bloomPath = initConfig.BaseDbPath + "/flatBloom/";
-                // Two bloom on mainnet
-                var bloom_capacity = long.Parse(Environment.GetEnvironmentVariable("BLOOM_CAPACITY") ?? "1000000000");
-                var bloom_bits_per_key = int.Parse(Environment.GetEnvironmentVariable("BLOOM_BITS_PER_KEY") ?? "12");
-                return new SegmentedBloom(bloomPath, bloom_capacity, bloom_bits_per_key, enabled: flatDbConfig.EnableFlatBloom);
-            })
 
             .AddSingleton<IStateReader, FlatStateReader>()
 

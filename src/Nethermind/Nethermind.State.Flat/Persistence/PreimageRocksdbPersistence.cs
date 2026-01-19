@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: 2025 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
-using System;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Autofac.Features.AttributeFilters;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
@@ -12,7 +10,6 @@ using Nethermind.Core.Extensions;
 using Nethermind.Db;
 using Nethermind.Int256;
 using Nethermind.Serialization.Rlp;
-using Nethermind.State.Flat.Persistence.BloomFilter;
 
 namespace Nethermind.State.Flat.Persistence;
 
@@ -34,17 +31,14 @@ public class PreimageRocksdbPersistence : IPersistence
     private readonly IColumnsDb<FlatDbColumns> _db;
     private static byte[] CurrentStateKey = Keccak.Compute("CurrentState").BytesToArray();
 
-    private readonly SegmentedBloom _bloomFilter;
     private IDb _preimageDb;
 
     public PreimageRocksdbPersistence(
         IColumnsDb<FlatDbColumns> db,
-        [KeyFilter(DbNames.Preimage)] IDb preimageDb,
-        [KeyFilter(DbNames.Flat)] SegmentedBloom bloomFilter)
+        [KeyFilter(DbNames.Preimage)] IDb preimageDb)
     {
         _db = db;
         _preimageDb = preimageDb;
-        _bloomFilter = bloomFilter;
     }
 
     internal static StateId ReadCurrentState(IReadOnlyKeyValueStore kv)
@@ -69,16 +63,6 @@ public class PreimageRocksdbPersistence : IPersistence
         kv.PutSpan(CurrentStateKey, bytes);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static ulong Mix(ulong a, ulong b)
-    {
-        return (a ^ RotateLeft(b, 23)) * 0x9E3779B97F4A7C15UL;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static ulong RotateLeft(ulong x, int k)
-        => (x << k) | (x >> (64 - k));
-
     public IPersistence.IPersistenceReader CreateReader()
     {
         var snapshot = _db.CreateSnapshot();
@@ -94,17 +78,14 @@ public class PreimageRocksdbPersistence : IPersistence
         IReadOnlyKeyValueStore state = snapshot.GetColumn(FlatDbColumns.Account);
         IReadOnlyKeyValueStore storage = snapshot.GetColumn(FlatDbColumns.Storage);
 
-        var flatReader = new FakeHashFlatReader<BloomFlatWrapper.BloomInterceptor<BaseFlatPersistence.Reader>>(
-            new BloomFlatWrapper.BloomInterceptor<BaseFlatPersistence.Reader>(
-                new BaseFlatPersistence.Reader(
-                    state,
-                    storage
-                ),
-                _bloomFilter
+        var flatReader = new FakeHashFlatReader<BaseFlatPersistence.Reader>(
+            new BaseFlatPersistence.Reader(
+                state,
+                storage
             )
         );
 
-        return new BasePersistence.Reader<FakeHashFlatReader<BloomFlatWrapper.BloomInterceptor<BaseFlatPersistence.Reader>>, BaseTriePersistence.Reader>(
+        return new BasePersistence.Reader<FakeHashFlatReader<BaseFlatPersistence.Reader>, BaseTriePersistence.Reader>(
             flatReader,
             trieReader,
             currentState,
@@ -128,16 +109,12 @@ public class PreimageRocksdbPersistence : IPersistence
                 $"Attempted to apply snapshot on top of wrong state. Snapshot from: {from}, Db state: {currentState}");
         }
 
-        var flatWriter = new FakeHashWriter<BloomFlatWrapper.BloomWriter<BaseFlatPersistence.WriteBatch>>(
-            new BloomFlatWrapper.BloomWriter<BaseFlatPersistence.WriteBatch>(
-                new BaseFlatPersistence.WriteBatch(
-                    ((ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.Storage)),
-                    batch.GetColumnBatch(FlatDbColumns.Account),
-                    batch.GetColumnBatch(FlatDbColumns.Storage),
-                    flags
-                ),
-                _bloomFilter,
-                (flags & WriteFlags.DisableWAL) != 0
+        var flatWriter = new FakeHashWriter<BaseFlatPersistence.WriteBatch>(
+            new BaseFlatPersistence.WriteBatch(
+                ((ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.Storage)),
+                batch.GetColumnBatch(FlatDbColumns.Account),
+                batch.GetColumnBatch(FlatDbColumns.Storage),
+                flags
             ),
             preimageWriteBatch,
             _preimageDb
@@ -152,7 +129,7 @@ public class PreimageRocksdbPersistence : IPersistence
             batch.GetColumnBatch(FlatDbColumns.FallbackNodes),
             flags);
 
-        return new BasePersistence.WriteBatch<FakeHashWriter<BloomFlatWrapper.BloomWriter<BaseFlatPersistence.WriteBatch>>, BaseTriePersistence.WriteBatch>(
+        return new BasePersistence.WriteBatch<FakeHashWriter<BaseFlatPersistence.WriteBatch>, BaseTriePersistence.WriteBatch>(
             flatWriter,
             trieWriteBatch,
             new Reactive.AnonymousDisposable(() =>
@@ -162,10 +139,6 @@ public class PreimageRocksdbPersistence : IPersistence
                 preimageWriteBatch.Dispose();
                 dbSnap.Dispose();
                 if (!flags.HasFlag(WriteFlags.DisableWAL))
-                {
-                    _bloomFilter.Flush();
-                }
-                else
                 {
                     _db.Flush(onlyWal: true);
                 }

@@ -19,7 +19,6 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
     private static byte[] CurrentStateKey = Keccak.Compute("CurrentState").BytesToArray();
 
     private readonly Configuration _configuration;
-    private readonly SegmentedBloom _bloomFilter;
     private readonly ILogger _logger;
 
     public record Configuration(bool FlatInTrie = false)
@@ -28,13 +27,11 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
 
     public RocksdbPersistence(
         IColumnsDb<FlatDbColumns> db,
-        [KeyFilter(DbNames.Flat)] SegmentedBloom bloomFilter,
         Configuration configuration,
         ILogManager logManager)
     {
         _configuration = configuration;
         _db = db;
-        _bloomFilter = bloomFilter;
         _logger = logManager.GetClassLogger<RocksdbPersistence>();
     }
 
@@ -83,27 +80,6 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
         {
             state = snapshot.GetColumn(FlatDbColumns.Account);
             storage = snapshot.GetColumn(FlatDbColumns.Storage);
-        }
-
-        if (_bloomFilter.IsEnabled)
-        {
-            return new BasePersistence.Reader<BasePersistence.ToHashedFlatReader<BloomFlatWrapper.BloomInterceptor<BaseFlatPersistence.Reader>>, BaseTriePersistence.Reader>(
-                new BasePersistence.ToHashedFlatReader<BloomFlatWrapper.BloomInterceptor<BaseFlatPersistence.Reader>>(
-                    new BloomFlatWrapper.BloomInterceptor<BaseFlatPersistence.Reader>(
-                        new BaseFlatPersistence.Reader(
-                            state,
-                            storage
-                        ),
-                        _bloomFilter
-                    )
-                ),
-                trieReader,
-                currentState,
-                new Reactive.AnonymousDisposable(() =>
-                {
-                    snapshot.Dispose();
-                })
-            );
         }
 
         return new BasePersistence.Reader<BasePersistence.ToHashedFlatReader<BaseFlatPersistence.Reader>, BaseTriePersistence.Reader>(
@@ -159,39 +135,6 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
             batch.GetColumnBatch(FlatDbColumns.FallbackNodes),
             flags);
 
-        if (_bloomFilter.IsEnabled)
-        {
-            return new BasePersistence.WriteBatch<BasePersistence.ToHashedWriteBatch<BloomFlatWrapper.BloomWriter<BaseFlatPersistence.WriteBatch>>, BaseTriePersistence.WriteBatch>(
-                new BasePersistence.ToHashedWriteBatch<BloomFlatWrapper.BloomWriter<BaseFlatPersistence.WriteBatch>>(
-                    new BloomFlatWrapper.BloomWriter<BaseFlatPersistence.WriteBatch>(
-                        new BaseFlatPersistence.WriteBatch(
-                            storageSnapshot,
-                            state,
-                            storage,
-                            flags
-                        ),
-                        _bloomFilter,
-                        (flags & WriteFlags.DisableWAL) != 0
-                    )
-                ),
-                trieWriteBatch,
-                new Reactive.AnonymousDisposable(() =>
-                {
-                    SetCurrentState(batch.GetColumnBatch(FlatDbColumns.Metadata), to);
-                    batch.Dispose();
-                    dbSnap.Dispose();
-                    if (!flags.HasFlag(WriteFlags.DisableWAL))
-                    {
-                        _bloomFilter.Flush();
-                    }
-                    else
-                    {
-                        _db.Flush(onlyWal: true);
-                    }
-                })
-            );
-        }
-
         return new BasePersistence.WriteBatch<BasePersistence.ToHashedWriteBatch<BaseFlatPersistence.WriteBatch>, BaseTriePersistence.WriteBatch>(
             new BasePersistence.ToHashedWriteBatch<BaseFlatPersistence.WriteBatch>(
                 new BaseFlatPersistence.WriteBatch(
@@ -208,10 +151,6 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
                 batch.Dispose();
                 dbSnap.Dispose();
                 if (!flags.HasFlag(WriteFlags.DisableWAL))
-                {
-                    _bloomFilter.Flush();
-                }
-                else
                 {
                     _db.Flush(onlyWal: true);
                 }
