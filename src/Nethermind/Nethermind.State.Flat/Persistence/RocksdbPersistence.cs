@@ -134,17 +134,20 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
         }
 
         IColumnsWriteBatch<FlatDbColumns> batch = _db.StartWriteBatch();
+        ISortedKeyValueStore storageSnapshot;
         IWriteOnlyKeyValueStore state;
         IWriteOnlyKeyValueStore storage;
         if (_configuration.FlatInTrie)
         {
             state = batch.GetColumnBatch(FlatDbColumns.StateNodes);
             storage = batch.GetColumnBatch(FlatDbColumns.StorageNodes);
+            storageSnapshot = (ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.StorageNodes);
         }
         else
         {
             state = batch.GetColumnBatch(FlatDbColumns.Account);
             storage = batch.GetColumnBatch(FlatDbColumns.Storage);
+            storageSnapshot = (ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.Storage);
         }
 
         var trieWriteBatch = new BaseTriePersistence.WriteBatch(
@@ -162,7 +165,7 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
                 new BasePersistence.ToHashedWriteBatch<BloomFlatWrapper.BloomWriter<BaseFlatPersistence.WriteBatch>>(
                     new BloomFlatWrapper.BloomWriter<BaseFlatPersistence.WriteBatch>(
                         new BaseFlatPersistence.WriteBatch(
-                            ((ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.Storage)),
+                            storageSnapshot,
                             state,
                             storage,
                             flags
@@ -192,7 +195,7 @@ public class RocksdbPersistence : IPersistence, IPersistenceWithConcurrentTrie
         return new BasePersistence.WriteBatch<BasePersistence.ToHashedWriteBatch<BaseFlatPersistence.WriteBatch>, BaseTriePersistence.WriteBatch>(
             new BasePersistence.ToHashedWriteBatch<BaseFlatPersistence.WriteBatch>(
                 new BaseFlatPersistence.WriteBatch(
-                    ((ISortedKeyValueStore)dbSnap.GetColumn(FlatDbColumns.Storage)),
+                    storageSnapshot,
                     state,
                     storage,
                     flags

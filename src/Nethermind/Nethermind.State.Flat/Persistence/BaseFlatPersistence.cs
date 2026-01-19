@@ -134,6 +134,9 @@ public static class BaseFlatPersistence
                 IWriteOnlyKeyValueStore? storageWriter = storage;
                 while (storageReader.MoveNext())
                 {
+                    // FlatInTrie
+                    if (storageReader.CurrentKey.Length != StorageKeyLength) continue;
+
                     // If we have storage prefix portion, we need to double check that the last 16 byte match.
                     if (Bytes.AreEqual(storageReader.CurrentKey[(StoragePrefixPortion + StorageSlotKeySize)..], accountPath.Bytes[StoragePrefixPortion..(StorageHashPrefixLength)]))
                     {
